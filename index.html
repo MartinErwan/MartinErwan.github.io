@@ -341,32 +341,10 @@
         <a href="https://www.linkedin.com/in/erwan-martin-105398209/" target="_blank">linkedin.com/in/erwan-martin-105398209</a>
       </div>
     </div>
-    <form class="contact-form" onsubmit="handleSubmit(event)">
-      <input type="text" placeholder="Your name" required />
-      <input type="email" placeholder="Your email" required />
-      <textarea placeholder="Your message" required></textarea>
-      <button type="submit">Send message</button>
-    </form>
   </section>
 
   <footer>
     <p>Built with HTML & CSS · Hosted on GitHub Pages · © 2026 Erwan Martin</p>
   </footer>
-
-  <script>
-    document.getElementById('nav-toggle').addEventListener('click', function() {
-      document.getElementById('nav-links').classList.toggle('open');
-    });
-    document.querySelectorAll('.nav-links a').forEach(function(l) {
-      l.addEventListener('click', function() { document.getElementById('nav-links').classList.remove('open'); });
-    });
-    function handleSubmit(e) {
-      e.preventDefault();
-      var btn = e.target.querySelector('button');
-      btn.textContent = 'Message sent!';
-      btn.style.background = '#1D9E75';
-      setTimeout(function() { btn.textContent = 'Send message'; btn.style.background = ''; e.target.reset(); }, 3000);
-    }
-  </script>
 </body>
 </html>
