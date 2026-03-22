@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marine Biodiversity Monitoring — Erwan Martin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1b2a; --bg-secondary: #112240; --text: #e8edf2;
+      --text-muted: #7a9bb5; --text-faint: rgba(255,255,255,0.25);
+      --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.18);
+      --accent: #378ADD; --accent-bg: #0d2a45; --accent-text: #5b9bd5;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
+
+    nav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-size: 15px; font-weight: 500; text-decoration: none; color: var(--text); }
+    .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .nav-back:hover { color: var(--text); }
+    .nav-back svg { width: 14px; height: 14px; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 0 40px; }
+
+    .hero { padding: 64px 0 48px; border-bottom: 0.5px solid var(--border); }
+    .hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent-text); }
+    .badge-company { background: #0a2218; color: #4a9e6b; }
+    .hero h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2; margin-bottom: 14px; letter-spacing: -.3px; }
+    .hero .subtitle { font-size: 15px; color: var(--text-muted); max-width: 600px; line-height: 1.75; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 40px 0; border-bottom: 0.5px solid var(--border); }
+    .stat { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
+    .stat .n { font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .stat .l { font-size: 12px; color: var(--text-muted); }
+
+    .section { padding: 40px 0; border-bottom: 0.5px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 20px; }
+    .section p { font-size: 15px; color: var(--text-muted); line-height: 1.75; margin-bottom: 12px; }
+    .section p:last-child { margin-bottom: 0; }
+
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stack-tag { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-muted); border: 0.5px solid var(--border); }
+
+    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 32px 24px; margin-top: 4px; }
+
+    footer { text-align: center; padding: 24px 40px; font-size: 12px; color: var(--text-faint); border-top: 0.5px solid var(--border); margin-top: 40px; }
+
+    @media (max-width: 640px) {
+      nav, .container { padding-left: 20px; padding-right: 20px; }
+      .hero { padding: 40px 0 32px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="../index.html" class="nav-logo">Erwan Martin</a>
+    <a href="../index.html#projects" class="nav-back">
+      <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back to projects
+    </a>
+  </nav>
+
+  <div class="container">
+
+    <div class="hero">
+      <div class="hero-meta">
+        <span class="badge">Signal Processing</span>
+        <span class="badge">Deep Learning</span>
+        <span class="badge">Unsupervised</span>
+        <span class="badge badge-company">TotalEnergies · 2025 – 2026</span>
+      </div>
+      <h1>Marine Biodiversity Monitoring<br>via Distributed Acoustic Sensing</h1>
+      <p class="subtitle">
+        R&D project designing an AI pipeline to detect and localize marine species
+        from raw DAS fiber-optic sensor data — processing 53 TB of acoustic signals
+        on an HPC cluster with no prior labeled dataset.
+      </p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="n">53 TB</div><div class="l">Raw acoustic data processed</div></div>
+      <div class="stat"><div class="n">−89%</div><div class="l">Compute time via Dask parallelization</div></div>
+      <div class="stat"><div class="n">CNN</div><div class="l">Autoencoder for feature extraction</div></div>
+      <div class="stat"><div class="n">HDBSCAN</div><div class="l">Unsupervised species clustering</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Context</div>
+      <p>
+        TotalEnergies operates subsea fiber-optic infrastructure that can be repurposed
+        as a passive acoustic sensor network (DAS — Distributed Acoustic Sensing).
+        The goal was to design an AI system capable of detecting marine species from
+        these raw vibration signals, without labeled ground truth data.
+      </p>
+      <p>
+        The project covered the full pipeline: building an acoustic species database
+        from scientific literature, processing raw signals on an HPC cluster,
+        training deep learning models for unsupervised feature extraction, and
+        localizing species spatio-temporally from their acoustic signatures.
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Pipeline architecture</div>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 780 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+          <defs>
+            <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
+            </marker>
+          </defs>
+
+          <!-- boxes -->
+          <rect x="10" y="70" width="120" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="170" y="70" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="340" y="70" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="510" y="70" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="680" y="70" width="90" height="60" rx="8" fill="#112f50" stroke="#378ADD" stroke-width="0.8"/>
+
+          <!-- arrows -->
+          <line x1="130" y1="100" x2="168" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="300" y1="100" x2="338" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="470" y1="100" x2="508" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr)"/>
+          <line x1="640" y1="100" x2="678" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr)"/>
+
+          <!-- labels top -->
+          <text x="70" y="58" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Raw Data</text>
+          <text x="235" y="58" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Signal Processing</text>
+          <text x="405" y="58" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Deep Learning</text>
+          <text x="575" y="58" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Clustering</text>
+          <text x="725" y="58" text-anchor="middle" font-size="10" fill="#5b9bd5" font-family="system-ui">Output</text>
+
+          <!-- box content -->
+          <text x="70" y="96" text-anchor="middle" font-size="12" fill="#e8edf2" font-family="system-ui" font-weight="500">53 TB</text>
+          <text x="70" y="112" text-anchor="middle" font-size="11" fill="#7a9bb5" font-family="system-ui">HPC Slurm</text>
+
+          <text x="235" y="93" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Butterworth / F-K</text>
+          <text x="235" y="108" text-anchor="middle" font-size="11" fill="#7a9bb5" font-family="system-ui">FFT spectrograms</text>
+
+          <text x="405" y="93" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">CNN Autoencoder</text>
+          <text x="405" y="108" text-anchor="middle" font-size="11" fill="#7a9bb5" font-family="system-ui">Feature extraction</text>
+
+          <text x="575" y="96" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">HDBSCAN</text>
+
+          <text x="725" y="93" text-anchor="middle" font-size="11" fill="#5b9bd5" font-family="system-ui">Species</text>
+          <text x="725" y="108" text-anchor="middle" font-size="11" fill="#5b9bd5" font-family="system-ui">location</text>
+          <text x="725" y="121" text-anchor="middle" font-size="10" fill="#5b9bd5" font-family="system-ui">(x, y, z, t)</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Stack</div>
+      <div class="stack">
+        <span class="stack-tag">Python</span>
+        <span class="stack-tag">TensorFlow</span>
+        <span class="stack-tag">Dask</span>
+        <span class="stack-tag">NumPy / SciPy</span>
+        <span class="stack-tag">Librosa</span>
+        <span class="stack-tag">Scikit-learn</span>
+        <span class="stack-tag">HDBSCAN</span>
+        <span class="stack-tag">HPC Slurm / LSF</span>
+        <span class="stack-tag">Linux</span>
+        <span class="stack-tag">Git</span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Erwan Martin · <a href="../index.html" style="color:var(--accent);text-decoration:none">erwan-martin.github.io</a></footer>
+
+</body>
+</html>

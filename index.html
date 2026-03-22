@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Erwan Martin — Data Scientist</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+  --bg: #0d1b2a;
+  --bg-secondary: #112240;
+  --text: #e8edf2;
+  --text-muted: #7a9bb5;
+  --text-faint: rgba(255,255,255,0.25);
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.18);
+  --accent: #378ADD;
+  --accent-bg: #0d2a45;
+  --accent-text: #5b9bd5;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+    html { scroll-behavior: smooth; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
+
+    nav { position: sticky; top: 0; z-index: 100; background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 0 40px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { font-size: 15px; font-weight: 500; text-decoration: none; color: var(--text); }
+    .nav-links { display: flex; gap: 28px; list-style: none; }
+    .nav-links a { font-size: 13px; color: var(--text-muted); text-decoration: none; transition: color .15s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .nav-toggle span { display: block; width: 20px; height: 1.5px; background: var(--text); margin: 4px 0; }
+
+    section { padding: 80px 40px; border-bottom: 0.5px solid var(--border); max-width: 900px; margin: 0 auto; }
+    section:last-child { border-bottom: none; }
+    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 32px; }
+
+    #hero { padding: 96px 40px 80px; }
+    .hero-tag { display: inline-block; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent-text); margin-bottom: 20px; }
+    .hero-meta {display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;}
+    .availability-badge {line-height: 1;}
+    #hero h1 { font-size: clamp(28px, 5vw, 42px); font-weight: 500; line-height: 1.15; margin-bottom: 16px; letter-spacing: -.5px; }
+    #hero .subtitle { font-size: 16px; color: var(--text-muted); max-width: 560px; line-height: 1.7; margin-bottom: 32px; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn { font-size: 13px; font-weight: 500; padding: 9px 20px; border-radius: var(--radius); cursor: pointer; text-decoration: none; display: inline-block; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--accent); color: #fff; border: none; }
+    .btn-outline { background: transparent; color: var(--text-muted); border: 0.5px solid var(--border-hover); }
+    .availability-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #27500A; background: #EAF3DE; padding: 4px 10px; border-radius: var(--radius); margin-bottom: 16px; }
+    .availability-badge::before { content: ''; display: block; width: 7px; height: 7px; border-radius: 50%; background: #639922; }
+
+    #about .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+    #about p { font-size: 15px; color: var(--text-muted); line-height: 1.75; margin-bottom: 14px; }
+    .stats-col { display: flex; flex-direction: column; gap: 12px; }
+    .stat-card { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
+    .stat-card .stat-number { font-size: 24px; font-weight: 500; margin-bottom: 2px; }
+    .stat-card .stat-label { font-size: 12px; color: var(--text-muted); }
+
+    .skills-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .skill-tag { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-muted); border: 0.5px solid var(--border); }
+
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .project-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 24px; transition: border-color .15s; display: flex; flex-direction: column; }
+    .project-card:hover { border-color: var(--border-hover); }
+    .project-type { font-size: 11px; font-weight: 500; color: var(--accent-text); background: var(--accent-bg); padding: 3px 9px; border-radius: var(--radius); display: inline-block; margin-bottom: 14px; align-self: flex-start; }
+    .project-card h3 { font-size: 15px; font-weight: 500; margin-bottom: 8px; }
+    .project-card p { font-size: 13px; color: var(--text-muted); line-height: 1.65; flex: 1; margin-bottom: 16px; }
+    .project-links { display: flex; gap: 12px; }
+    .project-links a { font-size: 12px; color: var(--accent); text-decoration: none; border-bottom: 0.5px solid transparent; }
+    .project-links a:hover { border-bottom-color: var(--accent); }
+
+    .cv-block { margin-bottom: 40px; }
+    .cv-block-title { font-size: 13px; font-weight: 500; color: var(--text-faint); margin-bottom: 16px; text-transform: uppercase; letter-spacing: .05em; }
+    .cv-row { display: flex; gap: 20px; padding: 14px 0; border-bottom: 0.5px solid var(--border); }
+    .cv-row:last-child { border-bottom: none; }
+    .cv-year { font-size: 12px; color: var(--text-faint); min-width: 120px; padding-top: 3px; flex-shrink: 0; }
+    .cv-content h3 { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .cv-content .cv-org { font-size: 13px; color: var(--accent); margin-bottom: 4px; }
+    .cv-content p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+    .download-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--accent); text-decoration: none; margin-top: 24px; padding: 8px 16px; border: 0.5px solid var(--border-hover); border-radius: var(--radius); }
+    .download-link:hover { background: var(--accent-bg); }
+
+    #contact .contact-intro { font-size: 15px; color: var(--text-muted); max-width: 480px; line-height: 1.7; margin-bottom: 32px; }
+    .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 32px; }
+    .contact-card { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
+    .contact-card .c-label { font-size: 11px; color: var(--text-faint); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+    .contact-card a { font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none; }
+    .contact-card a:hover { color: var(--accent); }
+    .contact-form { display: grid; gap: 12px; max-width: 520px; }
+    .contact-form input, .contact-form textarea { width: 100%; padding: 10px 14px; font-size: 14px; background: var(--bg-secondary); border: 0.5px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: inherit; outline: none; resize: vertical; }
+    .contact-form input:focus, .contact-form textarea:focus { border-color: var(--accent); }
+    .contact-form textarea { min-height: 100px; }
+    .contact-form button { justify-self: start; font-size: 13px; font-weight: 500; padding: 9px 20px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); cursor: pointer; }
+
+    footer { text-align: center; padding: 24px 40px; font-size: 12px; color: var(--text-faint); border-top: 0.5px solid var(--border); }
+
+    @media (max-width: 640px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 56px; left: 0; right: 0; background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 16px 20px; gap: 16px; }
+      .nav-toggle { display: block; }
+      section, #hero { padding: 56px 20px; }
+      #about .about-grid { grid-template-columns: 1fr; gap: 32px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="#hero" class="nav-logo">Erwan Martin</a>
+    <ul class="nav-links" id="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#resume">Resume</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <section id="hero">
+    <div class="hero-meta">
+      <div class="availability-badge">Available from July 2026</div>
+      <span class="hero-tag">Data Scientist · ML Engineer</span>
+    </div>
+    <h1>Building machine learning systems<br>for real-world scientific problems</h1>
+    <p class="subtitle">
+      Applied mathematics engineer specialized in Data Science. I build end-to-end
+      machine learning pipelines for scientific and industrial applications,
+      from raw data processing to scalable production systems.
+    </p>
+    <div class="hero-actions">
+      <a href="#projects" class="btn btn-primary">View my work</a>
+      <a href="Erwan_MARTIN_CV_ENG.pdf" class="btn btn-outline" download>Download CV</a>
+    </div>
+  </section>
+
+  <section id="about">
+    <div class="section-label">About me</div>
+    <div class="about-grid">
+      <div>
+        <p>
+          I'm a Data Scientist with hands-on experience across the full machine
+          learning lifecycle — from data collection and signal processing to model training and
+          production deployment. I've worked on scientific and industrial applications, including
+          physics-based modelling at Thales, healthcare ML at Aneo, and material property prediction
+          at Dow Chemical, as well as large-scale acoustic data processing in R&D at TotalEnergies.
+        </p>
+        <p>
+          My current focus is acoustic deep learning for marine biodiversity monitoring,
+          processing 53 TB of DAS sensor data on HPC clusters using convolutional autoencoders
+          and unsupervised clustering. 
+        </p>
+        <p>I'm open to Data Scientist and ML Engineer roles from July 2026.</p>
+        
+        <div class="skills-grid" style="margin-top:24px">
+          <span class="skill-tag">Python</span>
+          <span class="skill-tag">TensorFlow</span>
+          <span class="skill-tag">Scikit-learn</span>
+          <span class="skill-tag">Pandas</span>
+          <span class="skill-tag">NumPy</span>
+          <span class="skill-tag">Dask</span>
+          <span class="skill-tag">SQL</span>
+          <span class="skill-tag">MLflow</span>
+          <span class="skill-tag">Kedro</span>
+          <span class="skill-tag">Docker</span>
+          <span class="skill-tag">AWS S3</span>
+          <span class="skill-tag">HPC</span>
+          <span class="skill-tag">Slurm</span>
+          <span class="skill-tag">Streamlit</span>
+          <span class="skill-tag">Git</span>
+          <span class="skill-tag">Linux</span>
+        </div>
+      </div>
+      <div class="stats-col">
+        <div class="stat-card">
+          <div class="stat-number">3+</div>
+          <div class="stat-label">Years of experience</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">TOEIC 910/990</div>
+          <div class="stat-label">English C1 — working proficiency</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number">4 sectors</div>
+          <div class="stat-label">Energy · Healthcare · Materials · Physics</div>
+      </div>
+      </div>
+
+    </div>
+  </section>
+
+<section id="projects">
+  <div class="section-label">Projects</div>
+  <div class="projects-grid">
+
+    <div class="project-card">
+      <div style="display:flex; align-items: flex-start; justify-content:space-between; margin-bottom:14px;">
+        <span class="project-type">Signal Processing · DL</span>
+        <span style="font-size:11px; font-weight:500; padding:3px 8px; border-radius:var(--radius); background:#0a2218; color:#4a9e6b;">Professional</span>
+      </div>
+      <h3>Marine Biodiversity Monitoring (DAS)</h3>
+      <p>AI system for marine species detection from 53 TB of Distributed Acoustic Sensing data. Signal processing (Butterworth/F-K filters, FFT spectrograms) parallelized with Dask (-89% compute time), followed by CNN autoencoders and HDBSCAN clustering on HPC.</p>
+      <div class="project-links"><a href="projets/total.html">View more →</a></div>
+    </div>
+
+    <div class="project-card">
+      <div style="display:flex; align-items: flex-start; justify-content:space-between; margin-bottom:14px;">
+        <span class="project-type">MLOps · Healthcare</span>
+        <span style="font-size:11px; font-weight:500; padding:3px 8px; border-radius:var(--radius); background:#0a2218; color:#4a9e6b;">Professional</span>
+      </div>
+      <h3>Hepatic Spectrometry Android App</h3>
+      <p>End-to-end ML pipeline for macro-steatosis estimation from patient spectrometry data. Built with Kedro + MLflow (Random Forest, SVM, regression), deployed on AWS S3/Lambda, and shipped to production at Hôpital Paul Brousse (AP-HP).</p>
+      <div class="project-links"><a href="projets/aneo.html">View more →</a></div>
+    </div>
+
+    <div class="project-card">
+      <div style="display:flex; align-items: flex-start; justify-content:space-between; margin-bottom:14px;">
+        <span class="project-type">Materials ML</span>
+        <span style="font-size:11px; font-weight:500; padding:3px 8px; border-radius:var(--radius); background:#0a2218; color:#4a9e6b;">Professional</span>
+      </div>
+      <h3>Plastic Film Properties Predictor</h3>
+      <p>Supervised ML models predicting mechanical properties of plastic films from chemical composition. Two XGBoost models (R²=0.94 and R²=0.82) deployed on a Streamlit app for daily use by Dow engineering teams in Tarragona.</p>
+      <div class="project-links"><a href="projets/dow.html">View more →</a></div>
+    </div>
+
+    <div class="project-card">
+      <div style="display:flex; align-items: flex-start; justify-content:space-between; margin-bottom:14px;">
+        <span class="project-type">Physics · AutoML</span>
+        <span style="font-size:11px; font-weight:500; padding:3px 8px; border-radius:var(--radius); background:#0a2218; color:#4a9e6b;">Professional</span>
+      </div>
+      <h3>Electron Beam Trajectory Prediction</h3>
+      <p>ML model predicting electron beam trajectory from electron gun parameters at THALES. Monte Carlo simulations generated the training data (ANSYS, Persalys), modelled with H2O AutoML and TensorFlow.</p>
+      <div class="project-links"><a href="projets/thales.html">View more →</a></div>
+    </div>
+
+    <!-- Personal Project -->
+    <div class="project-card" style="border-style:dashed;">
+      <div style="display:flex; align-items: flex-start; justify-content:space-between; margin-bottom:14px;">
+        <span class="project-type">Computer Vision</span>
+        <span style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:var(--radius);background:rgba(255, 193, 7, 0.12);color:#ffcc66;">Personal</span>
+      </div>
+      <h3>Pokémon Recognition with Deep Learning</h3>
+      <p>CNN-based image classification model for recognizing first-generation Pokémon.<br>Includes data preprocessing, model training, and evaluation on custom dataset.</p>
+      <div class="project-links"><a href="https://github.com/MartinErwan/Image_Recognition/blob/main/IR_CNN.ipynb" target="_blank">GitHub →</a></div>
+    </div>
+
+    <div class="project-card" style="border-style:dashed;">
+      <div style="display:flex; align-items: flex-start; justify-content:space-between; margin-bottom:14px;">
+        <span class="project-type">Optimization</span>
+        <span style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:var(--radius);background:rgba(255, 193, 7, 0.12);color:#ffcc66;">Personal</span>
+      </div>
+      <h3>Build optimization for Mario Kart 8 Deluxe</h3>
+      <p>Collected and analyzed in-game statistics of all character, kart, wheel, and glider combinations. Performed multi-objective optimization to identify builds maximizing performance for competitive play.</p>
+      <div class="project-links"><a href="https://github.com/MartinErwan/Mario-Kart-Optimisation-Multi-Objective/blob/main/opt.ipynb" target="_blank">GitHub →</a></div>
+    </div>
+
+  </div>
+</section>
+
+  <section id="resume">
+    <div class="section-label">Resume</div>
+
+    <div class="cv-block">
+      <div class="cv-block-title">Experience</div>
+      <div class="cv-row">
+        <span class="cv-year">Jul. 2025 – Jul. 2026</span>
+        <div class="cv-content">
+          <h3>R&D Data Scientist</h3>
+          <div class="cv-org">TotalEnergies · Pau, France</div>
+          <p>Marine biodiversity AI using DAS acoustic data. Signal processing on 53 TB (HPC Slurm/LSF, Dask), CNN autoencoders for feature extraction (TensorFlow), unsupervised clustering (K-Means, HDBSCAN), spatio-temporal species localization.</p>
+        </div>
+      </div>
+      <div class="cv-row">
+        <span class="cv-year">May 2024 – Nov. 2024</span>
+        <div class="cv-content">
+          <h3>Data Scientist / Android Developer Intern</h3>
+          <div class="cv-org">Aneo · Boulogne-Billancourt, France</div>
+          <p>Hepatic spectrometry Android app (React, Ionic, TypeScript). CI/CD pipeline + AWS S3/Lambda. ML models via Kedro & MLflow (regression, Random Forest, SVM). Deployed at Hôpital Paul Brousse in collaboration with AP-HP.</p>
+        </div>
+      </div>
+      <div class="cv-row">
+        <span class="cv-year">Sep. 2023 – Mar. 2024</span>
+        <div class="cv-content">
+          <h3>Data Scientist Intern</h3>
+          <div class="cv-org">Dow Chemical · Tarragona, Spain</div>
+          <p>ML models predicting mechanical properties of plastic films. Data extraction & cleaning (SQL, Pandas), supervised models (XGBoost, Deep Learning). Two XGBoost models (R²=0.94 & 0.82) deployed on Streamlit for industrial use.</p>
+        </div>
+      </div>
+      <div class="cv-row">
+        <span class="cv-year">May 2022 – Sep. 2022</span>
+        <div class="cv-content">
+          <h3>Data Scientist Intern</h3>
+          <div class="cv-org">Thales · Vélizy-Villacoublay, France</div>
+          <p>Electron beam trajectory prediction from electron gun parameters. Monte Carlo simulation (ANSYS, Persalys), AutoML and Deep Learning modelling (H2O, TensorFlow).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cv-block">
+      <div class="cv-block-title">Education</div>
+      <div class="cv-row">
+        <span class="cv-year">Sep. 2020 – Dec. 2024</span>
+        <div class="cv-content">
+          <h3>Engineering Degree (Master’s level) — Applied Mathematics, Data Science</h3>
+          <div class="cv-org">CY Tech (ex EISTI) · France</div>
+          <p>Machine Learning · Deep Learning · Statistics · Time Series · Graph Theory · Optimization · Parallel Programming · Signal Processing · NLP · Constraint Programming.</p>
+        </div>
+      </div>
+      <div class="cv-row">
+        <span class="cv-year">Sep. 2018 – Jul. 2020</span>
+        <div class="cv-content">
+          <h3>Classes Préparatoires aux Grandes Écoles (MPSI – MP)</h3>
+          <div class="cv-org">Lycée Jean-Baptiste Corot · France</div>
+          <p>Intensive 2-year preparatory programme in Mathematics and Physics.</p>
+        </div>
+      </div>
+    </div>
+
+    <a href="Erwan_MARTIN_CV_ENG.pdf" class="download-link" download>↓ Download full CV (PDF)</a>
+  </section>
+
+  <section id="contact">
+    <div class="section-label">Contact</div>
+    <p class="contact-intro">
+      I'm available from July 2026 for Data Scientist or ML Engineer positions.
+      Feel free to reach out — I'm always happy to talk about data, ML, or new opportunities.
+    </p>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="c-label">Email</div>
+        <a href="mailto:erwan2309@gmail.com">erwan2309@gmail.com</a>
+      </div>
+      <div class="contact-card">
+        <div class="c-label">GitHub</div>
+        <a href="https://github.com/MartinErwan" target="_blank">github.com/MartinErwan</a>
+      </div>
+      <div class="contact-card">
+        <div class="c-label">LinkedIn</div>
+        <a href="https://www.linkedin.com/in/erwan-martin-105398209/" target="_blank">linkedin.com/in/erwan-martin-105398209</a>
+      </div>
+    </div>
+    <form class="contact-form" onsubmit="handleSubmit(event)">
+      <input type="text" placeholder="Your name" required />
+      <input type="email" placeholder="Your email" required />
+      <textarea placeholder="Your message" required></textarea>
+      <button type="submit">Send message</button>
+    </form>
+  </section>
+
+  <footer>
+    <p>Built with HTML & CSS · Hosted on GitHub Pages · © 2026 Erwan Martin</p>
+  </footer>
+
+  <script>
+    document.getElementById('nav-toggle').addEventListener('click', function() {
+      document.getElementById('nav-links').classList.toggle('open');
+    });
+    document.querySelectorAll('.nav-links a').forEach(function(l) {
+      l.addEventListener('click', function() { document.getElementById('nav-links').classList.remove('open'); });
+    });
+    function handleSubmit(e) {
+      e.preventDefault();
+      var btn = e.target.querySelector('button');
+      btn.textContent = 'Message sent!';
+      btn.style.background = '#1D9E75';
+      setTimeout(function() { btn.textContent = 'Send message'; btn.style.background = ''; e.target.reset(); }, 3000);
+    }
+  </script>
+</body>
+</html>

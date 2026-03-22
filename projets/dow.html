@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Plastic Film Properties Predictor — Erwan Martin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1b2a; --bg-secondary: #112240; --text: #e8edf2;
+      --text-muted: #7a9bb5; --text-faint: rgba(255,255,255,0.25);
+      --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.18);
+      --accent: #378ADD; --accent-bg: #0d2a45; --accent-text: #5b9bd5;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
+    nav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-size: 15px; font-weight: 500; text-decoration: none; color: var(--text); }
+    .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .nav-back:hover { color: var(--text); }
+    .nav-back svg { width: 14px; height: 14px; }
+    .container { max-width: 860px; margin: 0 auto; padding: 0 40px; }
+    .hero { padding: 64px 0 48px; border-bottom: 0.5px solid var(--border); }
+    .hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent-text); }
+    .badge-company { background: #0a2218; color: #4a9e6b; }
+    .hero h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2; margin-bottom: 14px; letter-spacing: -.3px; }
+    .hero .subtitle { font-size: 15px; color: var(--text-muted); max-width: 600px; line-height: 1.75; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 40px 0; border-bottom: 0.5px solid var(--border); }
+    .stat { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
+    .stat .n { font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .stat .l { font-size: 12px; color: var(--text-muted); }
+    .section { padding: 40px 0; border-bottom: 0.5px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 20px; }
+    .section p { font-size: 15px; color: var(--text-muted); line-height: 1.75; margin-bottom: 12px; }
+    .section p:last-child { margin-bottom: 0; }
+    .stack { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stack-tag { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-muted); border: 0.5px solid var(--border); }
+    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 32px 24px; margin-top: 4px; }
+    footer { text-align: center; padding: 24px 40px; font-size: 12px; color: var(--text-faint); border-top: 0.5px solid var(--border); margin-top: 40px; }
+    @media (max-width: 640px) { nav, .container { padding-left: 20px; padding-right: 20px; } .hero { padding: 40px 0 32px; } }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="../index.html" class="nav-logo">Erwan Martin</a>
+    <a href="../index.html#projects" class="nav-back">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back to projects
+    </a>
+  </nav>
+
+  <div class="container">
+
+    <div class="hero">
+      <div class="hero-meta">
+        <span class="badge">Supervised ML</span>
+        <span class="badge">Industrial</span>
+        <span class="badge">Streamlit</span>
+        <span class="badge badge-company">Dow Chemical · 2023 – 2024</span>
+      </div>
+      <h1>Mechanical Property Prediction<br>for Plastic Films</h1>
+      <p class="subtitle">
+        Supervised ML models predicting the mechanical properties of plastic films
+        from their chemical composition — enabling engineers to simulate formulation
+        outcomes without running physical experiments.
+      </p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="n">R² 0.94</div><div class="l">Best model — property 1</div></div>
+      <div class="stat"><div class="n">R² 0.82</div><div class="l">Best model — property 2</div></div>
+      <div class="stat"><div class="n">XGBoost</div><div class="l">Final model after DL comparison</div></div>
+      <div class="stat"><div class="n">Streamlit</div><div class="l">Deployed for daily industrial use</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Context</div>
+      <p>
+        Dow's engineering team in Tarragona needed a way to predict how changes in
+        plastic film chemical composition would affect their mechanical properties —
+        a process that typically requires costly and time-consuming lab experiments.
+      </p>
+      <p>
+        Starting from experimental data stored across internal databases, I built a
+        full pipeline from data extraction to a deployed prediction app used directly
+        by engineers to simulate formulation outcomes in seconds.
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Pipeline architecture</div>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+          <defs>
+            <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
+            </marker>
+          </defs>
+
+          <rect x="10" y="65" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="185" y="65" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="360" y="65" width="140" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+          <rect x="550" y="65" width="130" height="60" rx="8" fill="#112f50" stroke="#378ADD" stroke-width="0.8"/>
+
+          <line x1="140" y1="95" x2="183" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr3)"/>
+          <line x1="315" y1="95" x2="358" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr3)"/>
+          <line x1="500" y1="95" x2="548" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr3)"/>
+
+          <text x="75" y="53" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Data extraction</text>
+          <text x="250" y="53" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Preprocessing</text>
+          <text x="430" y="53" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.3)" font-family="system-ui">Modelling</text>
+          <text x="615" y="53" text-anchor="middle" font-size="10" fill="#5b9bd5" font-family="system-ui">Deployment</text>
+
+          <text x="75" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">SQL · Python</text>
+          <text x="75" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Internal DBs</text>
+          <text x="75" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Pandas · NumPy</text>
+
+          <text x="250" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Cleaning</text>
+          <text x="250" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Feature engineering</text>
+          <text x="250" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Train / test split</text>
+
+          <text x="430" y="86" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">XGBoost · Deep Learning</text>
+          <text x="430" y="101" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">TensorFlow · Scikit-learn</text>
+          <text x="430" y="116" text-anchor="middle" font-size="10" fill="#4a9e6b" font-family="system-ui">R²=0.94 · R²=0.82</text>
+
+          <text x="615" y="89" text-anchor="middle" font-size="11" fill="#5b9bd5" font-family="system-ui">Streamlit App</text>
+          <text x="615" y="104" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Daily use by</text>
+          <text x="615" y="117" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">engineers</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Stack</div>
+      <div class="stack">
+        <span class="stack-tag">Python</span>
+        <span class="stack-tag">XGBoost</span>
+        <span class="stack-tag">TensorFlow</span>
+        <span class="stack-tag">Scikit-learn</span>
+        <span class="stack-tag">Pandas</span>
+        <span class="stack-tag">NumPy</span>
+        <span class="stack-tag">SQL</span>
+        <span class="stack-tag">Streamlit</span>
+        <span class="stack-tag">Git</span>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>Erwan Martin · <a href="../index.html" style="color:var(--accent);text-decoration:none">erwan-martin.github.io</a></footer>
+</body>
+</html>
