@@ -36,10 +36,6 @@
     .fact .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 3px; }
     .fact .v { font-size: 13.5px; color: var(--text); }
 
-    .hero-visual { padding: 30px 0 6px; }
-    .hero-visual video { display: block; width: 100%; aspect-ratio: 8 / 3; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
-    .hero-visual p { font-size: 12.5px; color: var(--text-faint); margin-top: 11px; line-height: 1.6; }
-
     .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 36px 0; border-bottom: 0.5px solid var(--border); }
     .stat { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
     .stat .n { font-size: 20px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
@@ -58,16 +54,11 @@
 
     /* ---------- figures ---------- */
     .fig { margin: 30px 0 6px; }
-    .fig video, .fig img { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
+    .fig picture { display: block; }
+    .fig img { display: block; width: 100%; height: auto; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
     .fig figcaption { font-size: 12.5px; color: var(--text-faint); line-height: 1.65; margin-top: 11px; }
     .fig figcaption a { color: var(--accent-text); text-decoration: none; border-bottom: 0.5px solid rgba(91,155,213,.35); }
     .fig figcaption a:hover { color: var(--text); }
-
-    /* ---------- chapters ---------- */
-    .chapters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; list-style: none; }
-    .chapters button { font: inherit; font-size: 12.5px; color: var(--text-muted); background: var(--bg-secondary); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; transition: border-color .15s, color .15s; }
-    .chapters button:hover { color: var(--text); border-color: var(--border-hover); }
-    .chapters .t { color: var(--accent-text); font-variant-numeric: tabular-nums; margin-right: 7px; }
 
     /* ---------- idea cards ---------- */
     .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 26px 0 6px; }
@@ -141,16 +132,6 @@
       </div>
     </div>
 
-    <div class="hero-visual">
-      <video autoplay muted loop playsinline preload="auto"
-             poster="../assets/twt/twt-loop-poster.jpg"
-             aria-label="Looping animation of an electron beam bunching inside a traveling-wave tube while the signal it amplifies grows along the tube">
-        <source src="../assets/twt/twt-loop.mp4" type="video/mp4">
-      </video>
-      <p>Electron bunches forming inside a traveling-wave tube, and the microwave signal
-         they amplify growing along it — the device this project's electron gun feeds.</p>
-    </div>
-
     <div class="stats-row">
       <div class="stat"><div class="n">Monte Carlo</div><div class="l">Synthetic data generation (ANSYS)</div></div>
       <div class="stat"><div class="n">H2O</div><div class="l">AutoML benchmark across model families</div></div>
@@ -176,26 +157,19 @@
       </p>
 
       <figure class="fig">
-        <video id="twt-video" controls playsinline preload="metadata"
-               poster="../assets/twt/twt-explainer-poster.jpg"
-               aria-label="Animated explainer of how a traveling-wave tube amplifies a microwave signal">
-          <source src="../assets/twt/twt-explainer.mp4" type="video/mp4">
-          Your browser cannot play this video.
-        </video>
+        <picture>
+          <source srcset="../assets/twt/twt-loop-still.jpg" media="(prefers-reduced-motion: reduce)">
+          <img src="../assets/twt/twt-loop.gif" width="900" height="480"
+               alt="Animated diagram of a traveling-wave tube: electrons leave the cathode, pass the anode, bunch up along the helix, and the RF signal entering on the left leaves amplified on the right.">
+        </picture>
         <figcaption>
-          How a traveling-wave tube works — the beam, the slow-wave helix, the bunching and the gain.
-          Animation written for this page with <a href="https://www.manim.community/" target="_blank" rel="noopener">Manim</a>;
-          the electron dynamics are integrated from the equations of motion rather than drawn by hand
+          Drawn for this page with <a href="https://www.manim.community/" target="_blank" rel="noopener">Manim</a>
           (<a href="https://github.com/MartinErwan/MartinErwan.github.io/blob/main/assets/manim/twt.py" target="_blank" rel="noopener">source</a>).
-          It illustrates the physics context, not the project's own simulation output.
+          The bunching is integrated from the equations of motion rather than drawn by hand, and the helix
+          is wound with a pitch that really does slow the wave by the factor it claims.
+          A longer walk-through — including why the helix is what slows the wave down — is available as a
+          <a href="../assets/twt/twt-explainer.mp4">78-second clip</a>.
         </figcaption>
-        <ul class="chapters" id="twt-chapters">
-          <li><button type="button" data-t="0"><span class="t">0:00</span>The device</button></li>
-          <li><button type="button" data-t="13"><span class="t">0:13</span>The beam</button></li>
-          <li><button type="button" data-t="29"><span class="t">0:29</span>Slowing the wave down</button></li>
-          <li><button type="button" data-t="45"><span class="t">0:45</span>Bunching and gain</button></li>
-          <li><button type="button" data-t="68"><span class="t">1:08</span>Why the gun matters</button></li>
-        </ul>
       </figure>
 
       <div class="ideas">
@@ -238,15 +212,13 @@
       </p>
 
       <figure class="fig">
-        <video controls playsinline preload="metadata"
-               poster="../assets/twt/gun-problem-poster.jpg"
-               aria-label="Animated explainer of how electron gun parameters change the beam trajectory">
-          <source src="../assets/twt/gun-problem.mp4" type="video/mp4">
-          Your browser cannot play this video.
-        </video>
+        <img src="../assets/twt/gun-problem-still.jpg" width="1100" height="474"
+             alt="A mis-focused electron beam scalloping outward until it strikes the helix wall, with the four gun parameters shown as sliders below.">
         <figcaption>
-          A handful of gun parameters decide whether the beam threads the tube or burns it —
-          and every point in that parameter space costs a full physics run to evaluate.
+          A mis-set gun: the beam scallops outward until it strikes the helix, and the intercepted
+          current burns it. Four parameters decide it — and every point in that space costs a full
+          physics run to evaluate. Animated version:
+          <a href="../assets/twt/gun-problem.mp4">37-second clip</a>.
         </figcaption>
       </figure>
 
@@ -382,22 +354,5 @@
 
   <footer>Erwan Martin · <a href="../index.html">martinerwan.github.io</a></footer>
 
-  <script>
-    // Chapter chips: jump the explainer to the start of a section.
-    document.querySelectorAll('#twt-chapters button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var v = document.getElementById('twt-video');
-        v.currentTime = parseFloat(b.dataset.t);
-        v.play();
-      });
-    });
-
-    // Respect reduced-motion: never autoplay looping figures for those users.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      document.querySelectorAll('video[autoplay]').forEach(function (v) {
-        v.removeAttribute('autoplay'); v.setAttribute('controls', ''); v.pause();
-      });
-    }
-  </script>
 </body>
 </html>

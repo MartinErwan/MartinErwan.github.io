@@ -42,7 +42,7 @@ FAINT     = "#4a6a85"
 ACCENT    = "#378ADD"
 ACCENT_LT = "#5b9bd5"
 ELECTRON  = "#7cd4ff"
-DECEL     = "#ff8a5c"   # wave takes energy from the electrons
+DECEL     = "#ff9f63"   # wave takes energy from the electrons
 ACCEL     = "#59d49b"   # wave gives energy to the electrons
 WARN      = "#ffcc66"
 BAD       = "#e2574c"
@@ -182,11 +182,14 @@ class Beam:
     X_EMIT = X_CATH + 0.20
     X_ACC  = X_ANODE + 0.26
 
-    def __init__(self, n=130, seed=7):
+    def __init__(self, n=130, seed=7, v_phase=V_PHASE, lam=LAMBDA):
         rng = np.random.default_rng(seed)
         self.n = n
+        self.v_phase = v_phase
+        self.k = TAU / lam
+        self.v_beam = 1.06 * v_phase          # beam a hair faster than the wave
         self.x = np.linspace(self.X_EMIT, X_COL1, n) + rng.uniform(-0.02, 0.02, n)
-        self.v = np.full(n, V_BEAM)
+        self.v = np.full(n, self.v_beam)
         self.y0 = rng.uniform(-1, 1, n)                   # normalised transverse offset
         self.t = 0.0
         self.coupling = ValueTracker(0.0)   # strength of the wave <-> beam force
@@ -201,12 +204,12 @@ class Beam:
     # -- kinematics --------------------------------------------------------
     def _gun_velocity(self, x):
         u = np.clip((x - self.X_EMIT) / (self.X_ACC - self.X_EMIT), 0.015, 1.0)
-        return V_BEAM * np.sqrt(u)
+        return self.v_beam * np.sqrt(u)
 
     def field(self, x, t):
         """Axial electric field of the growing wave, in arbitrary units."""
         env = np.exp(np.clip(x - X_H0, 0, None) / L_GAIN)
-        return env * np.sin(K * (x - V_PHASE * t))
+        return env * np.sin(self.k * (x - self.v_phase * t))
 
     def step(self, dt):
         dt *= self.flow.get_value()
@@ -228,7 +231,7 @@ class Beam:
         out = self.x > X_COL1
         if out.any():
             self.x[out] = self.X_EMIT
-            self.v[out] = V_BEAM
+            self.v[out] = self.v_beam
         self._place()
 
     def _place(self):
@@ -295,9 +298,14 @@ class TWTScene(Scene):
         self.cap = VGroup()
 
     # -- wave layer --------------------------------------------------------
-    def make_wave_layer(self, gain=0.0):
-        """Build (but do not animate in) the field bands and the RF trace."""
+    def make_wave_layer(self, gain=0.0, only_decel=False):
+        """Build (but do not animate in) the field bands and the RF trace.
+
+        `only_decel` shades just the half-cycles that hold the electrons back,
+        which needs no two-colour key to read.
+        """
         beam = self.beam
+        k, vph = beam.k, beam.v_phase
         self.gain = ValueTracker(gain)    # 0 = uniform wave, 1 = exponential growth
 
         def strength(x):
@@ -306,7 +314,7 @@ class TWTScene(Scene):
             return (1 - g) * 0.5 + g * e
 
         # axial field of the wave, painted as bands inside the tube
-        n_band = 68
+        n_band = 180
         w = (X_H1 - X_H0) / n_band
         bands = VGroup(*[
             Rectangle(width=w * 1.02, height=2 * R_TUBE - 0.06, stroke_width=0,
@@ -317,9 +325,13 @@ class TWTScene(Scene):
             t = beam.t
             for i, b in enumerate(bands):
                 x = X_H0 + (i + 0.5) * w
-                s = np.sin(K * (x - V_PHASE * t))
-                b.set_fill(DECEL if s < 0 else ACCEL,
-                           opacity=0.02 + 0.46 * strength(x) * abs(s))
+                s = np.sin(k * (x - vph * t))
+                # the force on an electron is -e E, so sin > 0 slows it down
+                if only_decel:
+                    b.set_fill(DECEL, opacity=0.52 * strength(x) * max(s, 0.0) ** 0.85)
+                else:
+                    b.set_fill(DECEL if s > 0 else ACCEL,
+                               opacity=0.02 + 0.46 * strength(x) * abs(s))
         bands.add_updater(paint)
         paint(None)
         self.add(bands)
@@ -330,7 +342,7 @@ class TWTScene(Scene):
 
         def wave_curve():
             return FunctionGraph(
-                lambda x: WAVE_Y + amp * strength(x) * np.sin(K * (x - V_PHASE * beam.t)),
+                lambda x: WAVE_Y + amp * strength(x) * np.sin(k * (x - vph * beam.t)),
                 x_range=[X_H0, X_H1, 0.02], color=ACCENT_LT, stroke_width=3)
 
         def envelope_curve(sgn):
@@ -756,30 +768,105 @@ class ElectronGunProblem(TWTScene):
 
 
 # --------------------------------------------------------------------------
-# A short, seamlessly looping clip of the tube in steady state (page header)
+# The standalone looping figure — every part named, the wave visibly moving
 # --------------------------------------------------------------------------
 class TWTLoop(TWTScene):
-    """No captions, no chrome: bunched beam + growing wave, looping cleanly.
+    """A self-contained loop: what each part is called, and the signal
+    travelling from the RF input to the RF output while it grows.
 
-    The wave is periodic with period LAMBDA / V_PHASE, so a clip lasting a whole
-    number of periods joins back onto itself. The beam is run forward silently
-    first, for the same reason and to let the bunches settle.
+    The loop is built to close on itself exactly. One crest crosses the helix
+    in T_LOOP seconds, and the helix is exactly six wavelengths long, so after
+    T_LOOP the wave, the field and the bunches are all back where they started.
     """
 
-    PERIOD = LAMBDA / V_PHASE
+    T_LOOP = 4.8                                  # seconds, an exact loop
+    LAM    = (X_H1 - X_H0) / 6                    # six wavelengths of helix
+    VPH    = (X_H1 - X_H0) / T_LOOP               # crossed in one loop
 
     def construct(self):
         tube = build_tube()
-        self.beam = Beam()
+        tube.helix.set_stroke(opacity=0.55)       # let the beam read on top
+        self.beam = Beam(v_phase=self.VPH, lam=self.LAM)
         self.beam.coupling.set_value(1.0)
-        bands, base, wave_lbl, wave, env_up, env_dn = self.make_wave_layer(gain=1.0)
+        bands, base, _lane_lbl, wave, env_up, env_dn = self.make_wave_layer(
+            gain=1.0, only_decel=True)        # the lane label is replaced by the RF tags
 
-        # settle: 15 full wave periods, rendered by nobody
+        chrome = self.annotate()
+        markers = self.crest_markers()
+
+        # let the bunches settle first — whole loops, so the phase is unchanged
         dt = 1 / config.frame_rate
-        for _ in range(int(round(15 * self.PERIOD / dt))):
+        for _ in range(int(round(3 * self.T_LOOP / dt))):
             self.beam.step(dt)
 
         bands.set_z_index(-1)
-        self.add(bands, tube, base, wave, env_up, env_dn, self.beam.dots)
+        self.add(bands, tube, base, env_up, env_dn, wave, self.beam.dots, chrome, markers)
         self.beam.dots.add_updater(lambda m, dt: self.beam.step(dt))
-        self.wait(8 * self.PERIOD)          # 6.4 s — eight periods
+        self.wait(self.T_LOOP)
+
+    # -- naming every part -------------------------------------------------
+    def annotate(self):
+        def tag(txt, x, y, tip, size=21, color=MUTED):
+            lbl = T(txt, size, color).move_to([x, y, 0])
+            return VGroup(lbl, leader(lbl, tip, side=UP if y > AXIS_Y else DOWN))
+
+        title = T("How a traveling-wave tube amplifies a signal", 26, TXT,
+                  weight=MEDIUM).move_to([0, 3.52, 0])
+
+        above = VGroup(
+            tag("cathode", -6.02, 2.82, [X_CATH + 0.20, AXIS_Y + 0.42, 0]),
+            tag("anode", -4.42, 2.82, [X_ANODE + 0.13, AXIS_Y + 0.88, 0]),
+            tag("helix — the slow-wave structure", 0.45, 2.82, [0.45, AXIS_Y + 0.62, 0]),
+            tag("collector", 5.45, 2.82, [5.35, AXIS_Y + 0.74, 0]),
+        )
+
+        electrons = T("electrons", 19, ELECTRON).move_to([-3.05, AXIS_Y - 0.62, 0])
+        electrons = VGroup(electrons,
+                           leader(electrons, [-3.05, AXIS_Y - 0.16, 0], side=DOWN))
+
+        y_port = AXIS_Y - (R_TUBE + 0.17) - 0.42
+        rf_in = VGroup(T("RF in", 21, ACCENT_LT), T("weak signal", 18, FAINT)
+                       ).arrange(DOWN, buff=0.09)
+        rf_in.move_to([0, y_port, 0]).align_to([X_H0 - 0.30, 0, 0], RIGHT)
+        rf_out = VGroup(T("RF out", 21, ACCENT_LT), T("amplified", 18, FAINT)
+                        ).arrange(DOWN, buff=0.09)
+        rf_out.move_to([0, y_port, 0]).align_to([X_H1 + 0.30, 0, 0], LEFT)
+
+        # the signal lane belongs to those two ports — say so
+        drop_in = DashedLine([X_H0 + 0.15, y_port - 0.16, 0], [X_H0 + 0.15, WAVE_Y + 0.02, 0],
+                             dash_length=0.07, stroke_color=FAINT, stroke_width=1,
+                             stroke_opacity=0.55)
+        drop_out = DashedLine([X_H1 - 0.15, y_port - 0.16, 0], [X_H1 - 0.15, WAVE_Y + 0.02, 0],
+                              dash_length=0.07, stroke_color=FAINT, stroke_width=1,
+                              stroke_opacity=0.55)
+
+        swatch = Rectangle(width=0.26, height=0.20, stroke_width=0,
+                           fill_color=DECEL, fill_opacity=0.55)
+        key = VGroup(swatch, T("shaded: the wave's field is holding the electrons back — "
+                               "this is where they give up their energy", 19, MUTED)
+                     ).arrange(RIGHT, buff=0.20).move_to([0, -3.38, 0])
+
+        return VGroup(title, above, electrons, rf_in, rf_out, drop_in, drop_out, key)
+
+    # -- one crest, followed from end to end --------------------------------
+    def crest_markers(self):
+        beam, L = self.beam, X_H1 - X_H0
+        amp = 0.62
+        delta = ((PI / 2) - beam.k * X_H0) / beam.k % self.LAM   # start on a crest
+
+        def marker(phase):
+            def build():
+                x = X_H0 + (delta + beam.v_phase * beam.t + phase * L) % L
+                e = np.exp(np.clip(x - X_H0, 0, None) / L_GAIN) / 9.0
+                y = WAVE_Y + amp * e * np.sin(beam.k * (x - beam.v_phase * beam.t))
+                u = (x - X_H0) / L
+                fade = float(np.clip(min(u, 1 - u) / 0.07, 0, 1))
+                return VGroup(Dot([x, y, 0], radius=0.13, color=ACCENT_LT,
+                                  fill_opacity=0.20 * fade),
+                              Dot([x, y, 0], radius=0.055, color="#eaf4ff",
+                                  fill_opacity=0.95 * fade))
+            return always_redraw(build)
+
+        follow = T("follow one crest: it crawls forward at the speed of the electrons  →",
+                   18, FAINT).move_to([0, -2.88, 0])
+        return VGroup(marker(0.0), marker(0.5), follow)
