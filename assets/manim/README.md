@@ -7,7 +7,7 @@ Source of the explainer animations on
 | Scene | What it shows | Used as |
 |---|---|---|
 | `TravelingWaveTube` | The full explainer: the tube, the electron beam and its focusing, why the helix slows the wave down, bunching and exponential gain | `assets/twt/twt-explainer.mp4` |
-| `MagnetScatter` (in `magnets.py`) | What the project is actually about: scale the manufacturing scatter of the focusing magnets up and back down, and watch the field lose its periodicity, the beam envelope scallop into the helix, and the distribution of beam quality spread past the wall | `assets/twt/magnet-tolerance.gif` |
+| `MagnetScatter` (in `magnets.py`) | What the project is actually about: scale the manufacturing scatter of the focusing magnets up and back down, and watch the field lose its periodicity, part of the beam get scraped off on the helix, and the distribution of *delivered beam power* over 400 stacks grow a tail | `assets/twt/magnet-tolerance.gif` |
 | `TWTLoop3D` (in `twt3d.py`) | The same figure with a real helix, seen from a camera level with the axis: the signal spirals round the beam instead of oscillating past it | `assets/twt/twt-loop-3d.gif` |
 | `TWTLoop` | The labelled figure used on the page. The signal is lit along the circuit it really travels — in at one RF connector, round every turn of the helix, out at the other — so the slow-wave trick is visible rather than asserted; its amplitude is plotted in a lane of its own below. Loops exactly: the wave covers the whole wire in one loop, and six wavelengths fit on it | `assets/twt/twt-loop.gif` |
 
@@ -54,6 +54,18 @@ estimate and still renders on its own.
 
 Voice: [Piper](https://github.com/rhasspy/piper), `en_US-ryan-high`. That model
 is trained on RyanSpeech, which is CC BY-NC-SA 4.0 — personal use only.
+
+## Note on the magnet figure
+
+The envelope is the paraxial equation for periodic permanent-magnet focusing,
+`r'' = K/r - kappa B(z)^2 r`, with `kappa` tuned so a perfect stack advances the
+betatron phase by ~1.2 rad per magnet period — inside the stable band, which is
+why a perfect stack sits quiet. What crosses the helix radius is scraped off, so
+a hard-edged beam that swells to `r > R` keeps `(R/r)^2` of its current: that
+ratio is the number the figure reports, and the one the study was after. The
+stack drawn on screen is a genuine draw from the same distribution as the
+histogram, not a normalised one — a normalised stack is always milder than its
+own histogram.
 
 ## Note on the physics
 

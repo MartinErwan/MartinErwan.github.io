@@ -37,7 +37,7 @@ Y_MAG = 0.87             # magnet rows, above and below the axis
 H_MAG = 0.26
 
 FIELD_Y, FIELD_A = -0.15, 0.36
-HIST_X0, HIST_X1, HIST_Y, HIST_H = 0.25, 6.55, -3.05, 1.15
+HIST_X0, HIST_X1, HIST_Y, HIST_H = 0.25, 6.55, -2.85, 1.10
 BAR_X0, BAR_X1, BAR_Y = -6.50, -2.10, -1.95
 
 # envelope equation constants, tuned so a perfect stack gives a quiet beam
@@ -72,6 +72,18 @@ class MagnetScatter(TWTScene):
              * np.exp(-((z[None, :] - centres[:, None]) / w[:, None]) ** 2))
         return b.sum(axis=0)
 
+    @staticmethod
+    def transmission(r):
+        """Fraction of the beam that reaches the collector.
+
+        A hard-edged beam of radius r carries its current uniformly over the
+        area, so an excursion out to r > R_WALL scrapes everything outside the
+        wall: what is left is (R_WALL / r)^2 of the current. The worst
+        excursion sets the loss — once a shell is gone it is gone.
+        """
+        peak = np.max(r, axis=-1)
+        return np.minimum(1.0, (R_WALL / np.maximum(peak, 1e-6)) ** 2)
+
     def envelope(self, devs):
         """r(z) for a stack of draws. devs: (M, N_MAG) -> (M, NZ)."""
         z = np.linspace(Z0, Z1, NZ)
@@ -90,21 +102,25 @@ class MagnetScatter(TWTScene):
     def setup_physics(self):
         self.r_matched = 0.17
         self.rng = np.random.default_rng(5)
-        # the stack drawn on screen: picked so that it is comfortably inside the
-        # tube at half scatter and grazes the helix at full scatter
-        self.pattern = np.random.default_rng(300).normal(0, 1, N_MAG)
-        self.pattern /= np.abs(self.pattern).max()
+        # The stack drawn on screen is a genuine draw from the same distribution
+        # as the cloud — not a normalised one, which would always be milder than
+        # its own histogram. This one loses nothing at half scatter and about a
+        # quarter of the beam at full scatter.
+        self.pattern = np.random.default_rng(409).normal(0, 1, N_MAG)
         # the Monte-Carlo cloud, precomputed once per scatter level
         self.levels = np.linspace(0, self.SMAX, self.LEVELS)
         cloud = self.rng.normal(0, 1, (self.DRAWS, N_MAG))
-        self.hist = []
-        edges = np.linspace(0.10, 0.95, 27)
-        self.edges = edges
+        self.edges = np.linspace(0.55, 1.0, 25)
+        self.hist, self.p5 = [], []
         for s in self.levels:
             _, r = self.envelope(cloud * s)
-            peak = r[:, NZ // 4:].max(axis=1)
-            h, _ = np.histogram(np.clip(peak, edges[0], edges[-1] - 1e-6), bins=edges)
+            t = self.transmission(r[:, NZ // 4:])
+            h, _ = np.histogram(np.clip(t, self.edges[0], self.edges[-1] - 1e-9),
+                                bins=self.edges)
+            # square root, or the spike at "no loss at all" flattens its own tail
+            h = np.sqrt(h)
             self.hist.append(h / max(h.max(), 1))
+            self.p5.append(float(np.percentile(t, 5)))
         self.hist = np.array(self.hist)
 
     def scatter_now(self):
@@ -156,20 +172,33 @@ class MagnetScatter(TWTScene):
         return g
 
     def beam_band(self):
+        """The core that gets through, and in red the shell scraped off on the way."""
         z, r = self.envelope(self.devs_now())
         r = r[0]
-        hit = r.max() > R_WALL
-        col = BAD if hit else ELECTRON
-        top = np.stack([z, AXIS_Y + r, np.zeros_like(z)], axis=1)
-        bot = np.stack([z[::-1], AXIS_Y - r[::-1], np.zeros_like(z)], axis=1)
-        area = VMobject(stroke_width=0, fill_color=col, fill_opacity=0.22)
-        area.set_points_as_corners(np.concatenate([top, bot, top[:1]]))
-        edge = VGroup()
-        for pts in (top, bot):
-            e = VMobject(stroke_color=col, stroke_width=2.4)
-            e.set_points_as_corners(pts)
-            edge.add(e)
-        return VGroup(area, edge)
+        core = np.minimum(r, R_WALL)
+
+        def band(lo, hi, colour, fill):
+            top = np.stack([z, AXIS_Y + hi, np.zeros_like(z)], axis=1)
+            bot = np.stack([z[::-1], AXIS_Y + lo[::-1], np.zeros_like(z)], axis=1)
+            a = VMobject(stroke_width=0, fill_color=colour, fill_opacity=fill)
+            a.set_points_as_corners(np.concatenate([top, bot, top[:1]]))
+            return a
+
+        g = VGroup(band(-core, core, ELECTRON, 0.22))
+        if r.max() > R_WALL:                      # what never makes it to the collector
+            g.add(band(np.full_like(r, R_WALL), np.maximum(r, R_WALL), BAD, 0.85),
+                  band(-np.maximum(r, R_WALL), np.full_like(r, -R_WALL), BAD, 0.85))
+            # below the tube: the only band of clear space near the excursion
+            lost = T("scraped off on the wall — these electrons never arrive", 17, BAD)
+            lost.move_to([float(np.clip(z[int(np.argmax(r))], Z0 + 3.0, Z1 - 3.0)), 0.62, 0])
+            g.add(lost)
+        for sgn in (1, -1):
+            e = VMobject(stroke_color=BAD if r.max() > R_WALL else ELECTRON,
+                         stroke_width=2.4)
+            e.set_points_as_corners(
+                np.stack([z, AXIS_Y + sgn * r, np.zeros_like(z)], axis=1))
+            g.add(e)
+        return g
 
     # -- the field ---------------------------------------------------------
     def field_trace(self):
@@ -199,50 +228,65 @@ class MagnetScatter(TWTScene):
         return VGroup(track, fill, knob, title, ends)
 
     def verdict(self):
-        z, r = self.envelope(self.devs_now())
-        hit = r[0].max() > R_WALL
-        col = BAD if hit else GOOD
-        txt = "the beam is touching the helix" if hit else "the beam clears the helix"
-        dot = Dot(radius=0.09, color=col)
-        lbl = T(txt, 19, col)
-        g = VGroup(dot, lbl).arrange(RIGHT, buff=0.22)
-        g.move_to([(BAR_X0 + BAR_X1) / 2, BAR_Y - 0.95, 0])
+        """What the study actually measures: how much of the beam gets through."""
+        _, r = self.envelope(self.devs_now())
+        t = float(self.transmission(r[:, NZ // 4:])[0])
+        col = GOOD if t > 0.985 else (WARN if t > 0.93 else BAD)
+        num = T(f"{t * 100:.0f} %", 44, col, weight=MEDIUM)
+        lbl = T("of the beam reaches the collector", 19, MUTED)
+        g = VGroup(num, lbl).arrange(DOWN, buff=0.16)
+        g.move_to([(BAR_X0 + BAR_X1) / 2, BAR_Y - 1.25, 0])
         return g
 
     # -- the Monte-Carlo cloud --------------------------------------------
     def histogram(self):
         i = int(np.clip(np.searchsorted(self.levels, self.scatter_now()),
                         0, self.LEVELS - 1))
-        h = self.hist[i]
-        e = self.edges
-        span = HIST_X1 - HIST_X0
-        g = VGroup()
+        h, e = self.hist[i], self.edges
+        span, lo, hi = HIST_X1 - HIST_X0, e[0], e[-1]
+
+        def sx(v):
+            return HIST_X0 + span * (v - lo) / (hi - lo)
+
+        bars = VGroup()
         for k, v in enumerate(h):
-            x0 = HIST_X0 + span * (e[k] - e[0]) / (e[-1] - e[0])
-            x1 = HIST_X0 + span * (e[k + 1] - e[0]) / (e[-1] - e[0])
-            over = e[k] >= R_WALL
             if v <= 0:
                 continue
-            g.add(Rectangle(width=(x1 - x0) * 0.88, height=max(v * HIST_H, 0.004),
-                            stroke_width=0, fill_color=BAD if over else ACCENT,
-                            fill_opacity=0.85 if over else 0.55)
-                  .move_to([(x0 + x1) / 2, HIST_Y + max(v * HIST_H, 0.004) / 2, 0]))
+            x0, x1 = sx(e[k]), sx(e[k + 1])
+            height = max(v * HIST_H, 0.004)
+            bars.add(Rectangle(width=(x1 - x0) * 0.88, height=height, stroke_width=0,
+                               fill_color=ACCENT, fill_opacity=0.65)
+                     .move_to([(x0 + x1) / 2, HIST_Y + height / 2, 0]))
+
         base = Line([HIST_X0 - 0.1, HIST_Y, 0], [HIST_X1 + 0.1, HIST_Y, 0],
                     stroke_color=FAINT, stroke_width=1.5)
-        xw = HIST_X0 + span * (R_WALL - e[0]) / (e[-1] - e[0])
-        wall = DashedLine([xw, HIST_Y, 0], [xw, HIST_Y + HIST_H + 0.18, 0],
-                          dash_length=0.08, stroke_color=BAD, stroke_width=1.6)
-        wlbl = T("helix wall", 15, BAD).next_to(wall, UP, buff=0.05)
-        cap = T("peak beam radius over 400 magnet stacks", 18, MUTED)
-        cap.move_to([(HIST_X0 + HIST_X1) / 2, HIST_Y - 0.36, 0])
-        return VGroup(base, g, wall, wlbl, cap)
+        ticks = VGroup()
+        for v in (0.6, 0.8, 1.0):
+            ticks.add(T(f"{v * 100:.0f} %", 15, FAINT).move_to([sx(v), HIST_Y - 0.22, 0]))
+
+        # where the stack drawn above sits in that distribution
+        _, r = self.envelope(self.devs_now())
+        t = float(self.transmission(r[:, NZ // 4:])[0])
+        needle = DashedLine([sx(t), HIST_Y, 0], [sx(t), HIST_Y + HIST_H + 0.2, 0],
+                            dash_length=0.08, stroke_color=WARN, stroke_width=2)
+        ntag = T("the stack above", 15, WARN).next_to(needle, UP, buff=0.05)
+        if sx(t) > HIST_X1 - 1.1:
+            ntag.shift(LEFT * 0.9)
+
+        cap = T("how much gets through, over 400 magnet stacks", 18, MUTED)
+        cap.move_to([(HIST_X0 + HIST_X1) / 2, HIST_Y - 0.62, 0])
+        p5 = self.p5[i]
+        worst = T(f"the worst 5 % of stacks deliver {p5 * 100:.0f} % or less",
+                  18, GOOD if p5 > 0.985 else (WARN if p5 > 0.93 else BAD))
+        worst.move_to([(HIST_X0 + HIST_X1) / 2, HIST_Y - 0.98, 0])
+        return VGroup(base, bars, needle, ntag, ticks, cap, worst)
 
     # -- fixed text --------------------------------------------------------
     def chrome(self):
-        title = T("What a magnet tolerance does to the beam", 27, TXT,
+        title = T("What a magnet tolerance costs in beam power", 27, TXT,
                   weight=MEDIUM).move_to([0, 3.66, 0])
-        sub = T("the focusing comes from the field being periodic — the beam is only as good "
-                "as the magnets are alike", 19, FAINT).move_to([0, 3.20, 0])
+        sub = T("the focusing comes from the field being periodic — break it and electrons "
+                "are lost to the walls on the way", 19, FAINT).move_to([0, 3.20, 0])
         flab = T("magnetic field along the axis", 18, MUTED)
         flab.move_to([0, FIELD_Y - 0.80, 0])
         return VGroup(title, sub, flab)

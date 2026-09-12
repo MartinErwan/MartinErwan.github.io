@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Magnet Tolerances &amp; Beam Quality — Erwan Martin</title>
-  <meta name="description" content="A sensitivity study at Thales: how manufacturing scatter in a traveling-wave tube's focusing magnets propagates to beam quality, with a learned surrogate standing in for the Monte-Carlo physics runs." />
+  <meta name="description" content="A sensitivity study at Thales: how manufacturing scatter in a traveling-wave tube's focusing magnets costs beam power at the collector, with a learned surrogate standing in for the Monte-Carlo physics runs." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -209,43 +209,45 @@
       <p>
         Manufacturing breaks it. Magnets come off the line with dimensional scatter — a little
         under or over nominal — and every deviation leaves a dent in the field the beam travels
-        through. The envelope starts to scallop, the ripple grows, and in the tail of the
-        distribution the beam grazes the helix: intercepted current, local heating, and gain lost
-        from the very signal the tube exists to amplify.
+        through. The envelope starts to scallop, and wherever it swells past the helix radius that
+        part of the beam is simply scraped off on the wall: current lost, heat deposited where it
+        is least wanted, and power missing from the signal the tube exists to amplify.
       </p>
       <p>
-        So the question is not <em>does this design work</em>. It is: <strong>how much scatter can
-        the tube absorb before the beam degrades, and which dimension is it most sensitive to?</strong>
-        That is a question about a distribution rather than about a single design — which is
-        exactly what makes it expensive.
+        What the study measures is therefore the beam that <em>arrives</em> — the fraction of the
+        current still there at the collector. So the question is not <em>does this design work</em>.
+        It is: <strong>how much manufacturing scatter can the tube absorb before it starts losing
+        beam, and which dimension is it most sensitive to?</strong> That is a question about a
+        distribution rather than about a single design — which is exactly what makes it expensive.
       </p>
 
       <figure class="fig">
         <picture>
           <source srcset="../assets/twt/magnet-tolerance-still.jpg" media="(prefers-reduced-motion: reduce)">
-          <img src="../assets/twt/magnet-tolerance.gif" width="900" height="484"
-               alt="Animated diagram: as the size scatter of the focusing magnets grows, the field along the axis loses its periodicity, the beam envelope scallops until it touches the helix wall, and the distribution of peak beam radius over 400 magnet stacks spreads past the wall.">
+          <img src="../assets/twt/magnet-tolerance.gif" width="900" height="500"
+               alt="Animated diagram: as the size scatter of the focusing magnets grows, the field along the axis loses its periodicity, the beam envelope scallops until part of it is scraped off on the helix wall, and the distribution of transmitted beam power over 400 magnet stacks develops a tail.">
         </picture>
         <figcaption>
-          One pattern of manufacturing deviations, scaled up and back down. The beam envelope is
-          integrated from the paraxial equation for periodic focusing —
-          <em>r″ = K/r − κB(z)²r</em> — and the histogram is that same equation run over 400 draws
-          of the magnet deviations at the scatter currently on screen: a Monte-Carlo study in
-          miniature. The scale is schematic, not a real tolerance budget
+          One stack of magnets, its manufacturing deviations scaled up and back down. The envelope
+          is integrated from the paraxial equation for periodic focusing — <em>r″ = K/r − κB(z)²r</em> —
+          and whatever crosses the helix radius is scraped off, so the beam that arrives carries
+          only <em>(R/r)²</em> of the current it started with. The histogram is that same calculation
+          over 400 draws of the deviations at the scatter currently on screen: a Monte-Carlo study in
+          miniature. The scale carries no numbers — the real tolerance budget is not mine to publish
           (<a href="https://github.com/MartinErwan/MartinErwan.github.io/blob/main/assets/manim/magnets.py" target="_blank" rel="noopener">source</a>).
         </figcaption>
       </figure>
 
       <p>
         Every draw in that histogram is one stack of magnets sampled from its tolerances, and one
-        full electron-optics run in ANSYS: hours of CPU. A Monte-Carlo study that converges wants
+        full electron-optics run in ANSYS to find out how much beam survives it: hours of CPU. A Monte-Carlo study that converges wants
         thousands of them, and a sensitivity analysis wants thousands more.
       </p>
 
       <div class="callout">
         <p>
           Hence the surrogate: run the expensive simulation a few hundred times, let a model learn
-          the mapping from magnet geometry to beam quality, and run the Monte-Carlo on the model
+          the mapping from magnet geometry to transmitted beam, and run the Monte-Carlo on the model
           instead. Milliseconds a draw turns a study you cannot afford into one you can converge.
         </p>
       </div>
@@ -276,7 +278,7 @@
           <div>
             <h4>Buy the data</h4>
             <p>Monte-Carlo draws from those distributions, each one a full electron-optics run in
-               ANSYS, each returning the beam that stack of magnets actually produces. This is the
+               ANSYS, each returning how much of the beam that stack of magnets actually delivers. This is the
                step that costs hours, and the reason everything downstream exists.</p>
           </div>
         </li>
@@ -293,7 +295,7 @@
           <span class="step-n">04</span>
           <div>
             <h4>Model it</h4>
-            <p>A neural network in TensorFlow mapping magnet geometry to beam quality, with the
+            <p>A neural network in TensorFlow mapping magnet geometry to transmitted beam, with the
                feature preparation, scaling and validation split built around the structure of
                the simulated data.</p>
           </div>
@@ -303,8 +305,8 @@
           <div>
             <h4>Ask the question the study was for</h4>
             <p>With a surrogate answering in milliseconds, the Monte-Carlo can run at a sample
-               size the solver could never reach — enough to see the distribution of beam quality
-               and to rank which magnet dimension the tube is most sensitive to.</p>
+               size the solver could never reach — enough to see the distribution of delivered
+               beam power and to rank which magnet dimension the tube is most sensitive to.</p>
           </div>
         </li>
       </ol>
