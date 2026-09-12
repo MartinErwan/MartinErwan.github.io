@@ -198,7 +198,7 @@ class Beam:
         self.opac = ValueTracker(1.0)       # dim the beam while we talk about the wave
 
         self.dots = VGroup(*[
-            Dot(radius=0.036, color=ELECTRON, fill_opacity=0.95) for _ in range(n)])
+            Dot(radius=0.042, color=ELECTRON, fill_opacity=1.0) for _ in range(n)])
         self._place()
 
     # -- kinematics --------------------------------------------------------
@@ -768,42 +768,93 @@ class ElectronGunProblem(TWTScene):
 
 
 # --------------------------------------------------------------------------
-# The standalone looping figure — every part named, the wave visibly moving
+# The standalone looping figure used on the page
 # --------------------------------------------------------------------------
 class TWTLoop(TWTScene):
-    """A self-contained loop: what each part is called, and the signal
-    travelling from the RF input to the RF output while it grows.
+    """The wave drawn where it actually acts — through the beam itself.
 
-    The loop is built to close on itself exactly. One crest crosses the helix
-    in T_LOOP seconds, and the helix is exactly six wavelengths long, so after
-    T_LOOP the wave, the field and the bunches are all back where they started.
+    The RF wave rides on the axis, so its crests and troughs sweep across the
+    electrons; a row of arrows under the beam gives the push each electron is
+    getting at that instant, and the bunches form exactly where those arrows
+    converge. The loop closes on itself: one crest crosses the helix in
+    T_LOOP seconds and the helix is six wavelengths long.
     """
 
     T_LOOP = 4.8                                  # seconds, an exact loop
     LAM    = (X_H1 - X_H0) / 6                    # six wavelengths of helix
     VPH    = (X_H1 - X_H0) / T_LOOP               # crossed in one loop
+    AMP    = 0.52                                 # drawn amplitude at the output
+    Y_ARR  = AXIS_Y - 0.72                        # the row of force arrows,
+                                                  # clear of the wave's trough
 
+    def strength(self, x):
+        """Envelope of the wave: it grows exponentially down the tube."""
+        return np.exp(np.clip(x - X_H0, 0, None) / L_GAIN) / 9.0
+
+    def e_field(self, x, t):
+        return self.strength(x) * np.sin(self.beam.k * (x - self.VPH * t))
+
+    # ----------------------------------------------------------------------
     def construct(self):
         tube = build_tube()
-        tube.helix.set_stroke(opacity=0.55)       # let the beam read on top
+        tube.helix.set_stroke(color="#5c86ab", opacity=0.95, width=2.3)  # structure, not subject
         self.beam = Beam(v_phase=self.VPH, lam=self.LAM)
         self.beam.coupling.set_value(1.0)
-        bands, base, _lane_lbl, wave, env_up, env_dn = self.make_wave_layer(
-            gain=1.0, only_decel=True)        # the lane label is replaced by the RF tags
 
+        magnets = self.magnet_row()
+        wave = always_redraw(self.wave_curve)
+        forces = always_redraw(self.force_row)
         chrome = self.annotate()
         markers = self.crest_markers()
 
-        # let the bunches settle first — whole loops, so the phase is unchanged
         dt = 1 / config.frame_rate
-        for _ in range(int(round(3 * self.T_LOOP / dt))):
+        for _ in range(int(round(3 * self.T_LOOP / dt))):   # let the bunches settle
             self.beam.step(dt)
 
-        bands.set_z_index(-1)
-        self.add(bands, tube, base, env_up, env_dn, wave, self.beam.dots, chrome, markers)
+        self.add(tube, magnets, wave, forces, self.beam.dots, chrome, markers)
         self.beam.dots.add_updater(lambda m, dt: self.beam.step(dt))
         self.wait(self.T_LOOP)
 
+    # -- the wave, drawn straight through the beam -------------------------
+    def wave_curve(self):
+        t = self.beam.t
+        return FunctionGraph(lambda x: AXIS_Y + self.AMP * self.e_field(x, t),
+                             x_range=[X_H0, X_H1, 0.015],
+                             color="#63c6ff", stroke_width=4.0)
+
+    # -- what the wave is doing to each electron ---------------------------
+    def force_row(self):
+        t, out = self.beam.t, VGroup()
+        for x in np.linspace(X_H0 + 0.22, X_H1 - 0.22, 30):
+            f = -self.e_field(x, t)              # force on an electron is -eE
+            L = 0.46 * f
+            if abs(L) < 0.035:
+                continue
+            s = np.sign(L)
+            head = min(0.11, abs(L) * 0.5)
+            op = float(np.clip(abs(f) * 3.0, 0.15, 1.0))
+            out.add(Line([x - L / 2, self.Y_ARR, 0], [x + L / 2 - s * head, self.Y_ARR, 0],
+                         stroke_color=WARN, stroke_width=2.6, stroke_opacity=op),
+                    Polygon([x + L / 2, self.Y_ARR, 0],
+                            [x + L / 2 - s * head, self.Y_ARR + 0.058, 0],
+                            [x + L / 2 - s * head, self.Y_ARR - 0.058, 0],
+                            stroke_width=0, fill_color=WARN, fill_opacity=op))
+        return out
+
+    # -- the magnets that keep the beam pinched ----------------------------
+    def magnet_row(self):
+        g = VGroup()
+        y = R_TUBE + 0.38
+        for i, x in enumerate(np.arange(X_H0 + 0.75, X_H1 - 0.70, 0.96)):
+            for sgn in (1, -1):
+                north = (i % 2 == 0) == (sgn > 0)
+                col = "#4f7fd6" if north else "#9a5ad6"
+                block = RoundedRectangle(width=0.78, height=0.30, corner_radius=0.05,
+                                         stroke_width=0, fill_color=col, fill_opacity=0.9)
+                block.move_to([x, AXIS_Y + sgn * y, 0])
+                g.add(block, T("N" if north else "S", 15, "#0d1b2a", weight=BOLD)
+                      .move_to(block.get_center()))
+        return g
     # -- naming every part -------------------------------------------------
     def annotate(self):
         def tag(txt, x, y, tip, size=21, color=MUTED):
@@ -811,54 +862,45 @@ class TWTLoop(TWTScene):
             return VGroup(lbl, leader(lbl, tip, side=UP if y > AXIS_Y else DOWN))
 
         title = T("How a traveling-wave tube amplifies a signal", 26, TXT,
-                  weight=MEDIUM).move_to([0, 3.52, 0])
+                  weight=MEDIUM).move_to([0, 3.55, 0])
 
         above = VGroup(
-            tag("cathode", -6.02, 2.82, [X_CATH + 0.20, AXIS_Y + 0.42, 0]),
-            tag("anode", -4.42, 2.82, [X_ANODE + 0.13, AXIS_Y + 0.88, 0]),
-            tag("helix — the slow-wave structure", 0.45, 2.82, [0.45, AXIS_Y + 0.62, 0]),
-            tag("collector", 5.45, 2.82, [5.35, AXIS_Y + 0.74, 0]),
+            tag("cathode", -6.02, 2.92, [X_CATH + 0.20, AXIS_Y + 0.42, 0]),
+            tag("anode", -4.42, 2.92, [X_ANODE + 0.13, AXIS_Y + 0.88, 0]),
+            tag("helix — the slow-wave structure", 0.55, 2.92, [0.55, AXIS_Y + 0.62, 0]),
+            tag("collector", 5.45, 2.92, [5.35, AXIS_Y + 0.74, 0]),
         )
 
-        electrons = T("electrons", 19, ELECTRON).move_to([-3.05, AXIS_Y - 0.62, 0])
-        electrons = VGroup(electrons,
-                           leader(electrons, [-3.05, AXIS_Y - 0.16, 0], side=DOWN))
+        electrons = tag("electrons", -3.45, AXIS_Y + 0.46,
+                        [-3.45, AXIS_Y + 0.17, 0], size=19, color=ELECTRON)
+        magnets = tag("focusing magnets — they keep the beam pinched", -0.37, -0.98,
+                      [-0.37, -0.31, 0], size=19)
 
-        y_port = AXIS_Y - (R_TUBE + 0.17) - 0.42
         rf_in = VGroup(T("RF in", 21, ACCENT_LT), T("weak signal", 18, FAINT)
                        ).arrange(DOWN, buff=0.09)
-        rf_in.move_to([0, y_port, 0]).align_to([X_H0 - 0.30, 0, 0], RIGHT)
+        rf_in.move_to([0, -0.45, 0]).align_to([X_H0 - 0.30, 0, 0], RIGHT)
         rf_out = VGroup(T("RF out", 21, ACCENT_LT), T("amplified", 18, FAINT)
                         ).arrange(DOWN, buff=0.09)
-        rf_out.move_to([0, y_port, 0]).align_to([X_H1 + 0.30, 0, 0], LEFT)
+        rf_out.move_to([0, -0.45, 0]).align_to([X_H1 + 0.30, 0, 0], LEFT)
 
-        # the signal lane belongs to those two ports — say so
-        drop_in = DashedLine([X_H0 + 0.15, y_port - 0.16, 0], [X_H0 + 0.15, WAVE_Y + 0.02, 0],
-                             dash_length=0.07, stroke_color=FAINT, stroke_width=1,
-                             stroke_opacity=0.55)
-        drop_out = DashedLine([X_H1 - 0.15, y_port - 0.16, 0], [X_H1 - 0.15, WAVE_Y + 0.02, 0],
-                              dash_length=0.07, stroke_color=FAINT, stroke_width=1,
-                              stroke_opacity=0.55)
+        icon = VGroup(Line([0.20, 0, 0], [-0.10, 0, 0], stroke_color=WARN, stroke_width=2.6),
+                      Polygon([-0.20, 0, 0], [-0.10, 0.058, 0], [-0.10, -0.058, 0],
+                              stroke_width=0, fill_color=WARN, fill_opacity=1))
+        key = VGroup(icon, T("arrows: the push the wave gives each electron — backwards means "
+                             "it is being slowed, feeding the wave", 19, MUTED)
+                     ).arrange(RIGHT, buff=0.22).move_to([0, -1.62, 0])
 
-        swatch = Rectangle(width=0.26, height=0.20, stroke_width=0,
-                           fill_color=DECEL, fill_opacity=0.55)
-        key = VGroup(swatch, T("shaded: the wave's field is holding the electrons back — "
-                               "this is where they give up their energy", 19, MUTED)
-                     ).arrange(RIGHT, buff=0.20).move_to([0, -3.38, 0])
-
-        return VGroup(title, above, electrons, rf_in, rf_out, drop_in, drop_out, key)
+        return VGroup(title, above, electrons, magnets, rf_in, rf_out, key)
 
     # -- one crest, followed from end to end --------------------------------
     def crest_markers(self):
         beam, L = self.beam, X_H1 - X_H0
-        amp = 0.62
         delta = ((PI / 2) - beam.k * X_H0) / beam.k % self.LAM   # start on a crest
 
         def marker(phase):
             def build():
-                x = X_H0 + (delta + beam.v_phase * beam.t + phase * L) % L
-                e = np.exp(np.clip(x - X_H0, 0, None) / L_GAIN) / 9.0
-                y = WAVE_Y + amp * e * np.sin(beam.k * (x - beam.v_phase * beam.t))
+                x = X_H0 + (delta + self.VPH * beam.t + phase * L) % L
+                y = AXIS_Y + self.AMP * self.e_field(x, beam.t)
                 u = (x - X_H0) / L
                 fade = float(np.clip(min(u, 1 - u) / 0.07, 0, 1))
                 return VGroup(Dot([x, y, 0], radius=0.13, color=ACCENT_LT,
@@ -868,5 +910,5 @@ class TWTLoop(TWTScene):
             return always_redraw(build)
 
         follow = T("follow one crest: it crawls forward at the speed of the electrons  →",
-                   18, FAINT).move_to([0, -2.88, 0])
+                   18, FAINT).move_to([0, -2.12, 0])
         return VGroup(marker(0.0), marker(0.5), follow)

@@ -8,7 +8,7 @@ Source of the explainer animations on
 |---|---|---|
 | `TravelingWaveTube` | The full explainer: the tube, the electron beam and its focusing, why the helix slows the wave down, bunching and exponential gain | `assets/twt/twt-explainer.mp4` |
 | `ElectronGunProblem` | How gun parameters bend the beam trajectory, what interception costs, and why a learned surrogate was needed | `assets/twt/gun-problem.mp4` + `gun-problem-still.jpg` |
-| `TWTLoop` | The labelled figure used on the page: every part named, the signal visibly travelling from the RF input to the RF output as it grows. Loops exactly — one crest crosses the helix in one loop, and the helix is six wavelengths long | `assets/twt/twt-loop.gif` |
+| `TWTLoop` | The labelled figure used on the page: the wave drawn along the beam itself, a row of arrows giving the force it exerts on each electron, the magnets, and every part named. Loops exactly — one crest crosses the helix in one loop, and the helix is six wavelengths long | `assets/twt/twt-loop.gif` |
 
 ## Rendering
 
@@ -28,7 +28,7 @@ ffmpeg -framerate 30 -start_number 0 -i TravelingWaveTube%04d.png \
 
 # gif — no dithering, the artwork is flat enough that it only adds noise
 ffmpeg -framerate 30 -start_number 0 -i TWTLoop%04d.png \
-       -vf "crop=1600:854:0:18,fps=15,scale=900:-1:flags=lanczos,split[a][b];\
+       -vf "crop=1600:714:0:12,fps=15,scale=900:-1:flags=lanczos,split[a][b];\
             [a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=none" \
        -loop 0 raw.gif
 gifsicle -O3 --lossy=25 raw.gif -o twt-loop.gif
