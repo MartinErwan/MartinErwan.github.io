@@ -98,6 +98,17 @@ def helix_points(x0, x1, radius=R_HELIX, turns=TURNS, samples=900):
     return np.stack([x, y, np.zeros_like(x)], axis=1)
 
 
+def helix_samples(n, x0=X_H0, x1=X_H1, radius=R_HELIX, turns=TURNS):
+    """Points along the drawn helix, paired with the axial position of each.
+
+    The wire is sampled uniformly in turn angle, so the index is also uniform
+    in *arc length along the wire* — which is what the travelling wave runs on.
+    """
+    pts = helix_points(x0, x1, radius=radius, turns=turns, samples=n)
+    axial = np.linspace(x0, x1, n)
+    return pts, axial
+
+
 def helix_wire_length(turns=1, radius=R_HELIX, span=(X_H1 - X_H0), total_turns=TURNS):
     """True 3-D length of `turns` turns of the physical wire."""
     pitch = span / total_turns
@@ -780,12 +791,14 @@ class TWTLoop(TWTScene):
     T_LOOP seconds and the helix is six wavelengths long.
     """
 
-    T_LOOP = 4.8                                  # seconds, an exact loop
+    T_LOOP = 7.2                                  # seconds, an exact loop
     LAM    = (X_H1 - X_H0) / 6                    # six wavelengths of helix
     VPH    = (X_H1 - X_H0) / T_LOOP               # crossed in one loop
-    AMP    = 0.52                                 # drawn amplitude at the output
-    Y_ARR  = AXIS_Y - 0.72                        # the row of force arrows,
-                                                  # clear of the wave's trough
+    AMP    = 0.48                                 # drawn amplitude at the output
+    NSEG   = 360                                  # pieces the wire is cut into
+
+    WIRE   = "#3e6486"                            # the wire, unlit
+    GLOW   = "#ffd27a"                            # the wave running along it
 
     def strength(self, x):
         """Envelope of the wave: it grows exponentially down the tube."""
@@ -797,49 +810,56 @@ class TWTLoop(TWTScene):
     # ----------------------------------------------------------------------
     def construct(self):
         tube = build_tube()
-        tube.helix.set_stroke(color="#5c86ab", opacity=0.95, width=2.3)  # structure, not subject
+        tube.remove(tube.helix)                   # replaced by the lit version
         self.beam = Beam(v_phase=self.VPH, lam=self.LAM)
         self.beam.coupling.set_value(1.0)
 
+        wire = self.lit_helix()
         magnets = self.magnet_row()
         wave = always_redraw(self.wave_curve)
-        forces = always_redraw(self.force_row)
         chrome = self.annotate()
-        markers = self.crest_markers()
 
         dt = 1 / config.frame_rate
-        for _ in range(int(round(3 * self.T_LOOP / dt))):   # let the bunches settle
+        for _ in range(int(round(2 * self.T_LOOP / dt))):   # let the bunches settle
             self.beam.step(dt)
 
-        self.add(tube, magnets, wave, forces, self.beam.dots, chrome, markers)
+        self.add(tube, magnets, wire, wave, self.beam.dots, chrome)
         self.beam.dots.add_updater(lambda m, dt: self.beam.step(dt))
         self.wait(self.T_LOOP)
 
-    # -- the wave, drawn straight through the beam -------------------------
+    # -- the wave, running along the wire itself ---------------------------
+    def lit_helix(self):
+        """The helix cut into short pieces, each lit by the wave passing through it.
+
+        The signal moves along the *wire* at the speed of light. Six wavelengths
+        fit on the wire of the whole helix, and the wave covers that wire in one
+        loop — so the lit beads slide right round every turn while the pattern
+        as a whole only creeps forward, at the speed of the beam. That gap is
+        the whole point of a slow-wave structure.
+        """
+        pts, axial = helix_samples(self.NSEG + 1)
+        segs = VGroup(*[Line(pts[i], pts[i + 1], stroke_color=self.WIRE,
+                             stroke_width=1.8) for i in range(self.NSEG)])
+        base, glow = ManimColor(self.WIRE), ManimColor(self.GLOW)
+
+        def paint(_):
+            u = self.beam.t / self.T_LOOP
+            for i, seg in enumerate(segs):
+                ph = TAU * 6 * (i / self.NSEG - u)
+                bead = (0.5 * (1 + np.sin(ph))) ** 4        # narrow, so it reads as motion
+                g = bead * (0.45 + 0.55 * self.strength(axial[i]))
+                seg.set_stroke(color=interpolate_color(base, glow, g),
+                               width=1.8 + 4.6 * g, opacity=0.75 + 0.25 * g)
+        segs.add_updater(paint)
+        paint(None)
+        return segs
+
+    # -- the field that wave puts on the axis, where the beam is -----------
     def wave_curve(self):
         t = self.beam.t
         return FunctionGraph(lambda x: AXIS_Y + self.AMP * self.e_field(x, t),
                              x_range=[X_H0, X_H1, 0.015],
-                             color="#63c6ff", stroke_width=4.0)
-
-    # -- what the wave is doing to each electron ---------------------------
-    def force_row(self):
-        t, out = self.beam.t, VGroup()
-        for x in np.linspace(X_H0 + 0.22, X_H1 - 0.22, 30):
-            f = -self.e_field(x, t)              # force on an electron is -eE
-            L = 0.46 * f
-            if abs(L) < 0.035:
-                continue
-            s = np.sign(L)
-            head = min(0.11, abs(L) * 0.5)
-            op = float(np.clip(abs(f) * 3.0, 0.15, 1.0))
-            out.add(Line([x - L / 2, self.Y_ARR, 0], [x + L / 2 - s * head, self.Y_ARR, 0],
-                         stroke_color=WARN, stroke_width=2.6, stroke_opacity=op),
-                    Polygon([x + L / 2, self.Y_ARR, 0],
-                            [x + L / 2 - s * head, self.Y_ARR + 0.058, 0],
-                            [x + L / 2 - s * head, self.Y_ARR - 0.058, 0],
-                            stroke_width=0, fill_color=WARN, fill_opacity=op))
-        return out
+                             color="#ffd27a", stroke_width=2.8)
 
     # -- the magnets that keep the beam pinched ----------------------------
     def magnet_row(self):
@@ -855,6 +875,7 @@ class TWTLoop(TWTScene):
                 g.add(block, T("N" if north else "S", 15, "#0d1b2a", weight=BOLD)
                       .move_to(block.get_center()))
         return g
+
     # -- naming every part -------------------------------------------------
     def annotate(self):
         def tag(txt, x, y, tip, size=21, color=MUTED):
@@ -883,32 +904,9 @@ class TWTLoop(TWTScene):
                         ).arrange(DOWN, buff=0.09)
         rf_out.move_to([0, -0.45, 0]).align_to([X_H1 + 0.30, 0, 0], LEFT)
 
-        icon = VGroup(Line([0.20, 0, 0], [-0.10, 0, 0], stroke_color=WARN, stroke_width=2.6),
-                      Polygon([-0.20, 0, 0], [-0.10, 0.058, 0], [-0.10, -0.058, 0],
-                              stroke_width=0, fill_color=WARN, fill_opacity=1))
-        key = VGroup(icon, T("arrows: the push the wave gives each electron — backwards means "
-                             "it is being slowed, feeding the wave", 19, MUTED)
-                     ).arrange(RIGHT, buff=0.22).move_to([0, -1.62, 0])
+        key = T("Along the wire the signal runs at nearly the speed of light. Coiled into a "
+                "helix, it can only creep forward — at the speed of the electrons.",
+                19, MUTED, wrap=82)
+        key.move_to([0, -1.78, 0])
 
         return VGroup(title, above, electrons, magnets, rf_in, rf_out, key)
-
-    # -- one crest, followed from end to end --------------------------------
-    def crest_markers(self):
-        beam, L = self.beam, X_H1 - X_H0
-        delta = ((PI / 2) - beam.k * X_H0) / beam.k % self.LAM   # start on a crest
-
-        def marker(phase):
-            def build():
-                x = X_H0 + (delta + self.VPH * beam.t + phase * L) % L
-                y = AXIS_Y + self.AMP * self.e_field(x, beam.t)
-                u = (x - X_H0) / L
-                fade = float(np.clip(min(u, 1 - u) / 0.07, 0, 1))
-                return VGroup(Dot([x, y, 0], radius=0.13, color=ACCENT_LT,
-                                  fill_opacity=0.20 * fade),
-                              Dot([x, y, 0], radius=0.055, color="#eaf4ff",
-                                  fill_opacity=0.95 * fade))
-            return always_redraw(build)
-
-        follow = T("follow one crest: it crawls forward at the speed of the electrons  →",
-                   18, FAINT).move_to([0, -2.12, 0])
-        return VGroup(marker(0.0), marker(0.5), follow)
