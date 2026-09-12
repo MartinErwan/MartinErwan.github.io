@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Electron Beam Prediction — Erwan Martin</title>
+  <meta name="description" content="Machine-learning surrogate predicting the trajectory of an electron beam from electron-gun parameters, trained on Monte-Carlo physics simulations at Thales." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -11,36 +12,99 @@
       --text-muted: #7a9bb5; --text-faint: rgba(255,255,255,0.25);
       --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.18);
       --accent: #378ADD; --accent-bg: #0d2a45; --accent-text: #5b9bd5;
-      --radius: 8px; --radius-lg: 12px;
+      --warn: #ffcc66; --radius: 8px; --radius-lg: 12px;
     }
     html { scroll-behavior: smooth; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
-    nav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    nav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 0.5px solid var(--border); background: rgba(13,27,42,.85); backdrop-filter: saturate(140%) blur(8px); position: sticky; top: 0; z-index: 100; }
     .nav-logo { font-size: 15px; font-weight: 500; text-decoration: none; color: var(--text); }
-    .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .15s; }
     .nav-back:hover { color: var(--text); }
     .nav-back svg { width: 14px; height: 14px; }
+
     .container { max-width: 860px; margin: 0 auto; padding: 0 40px; }
-    .hero { padding: 64px 0 48px; border-bottom: 0.5px solid var(--border); }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 64px 0 44px; border-bottom: 0.5px solid var(--border); }
     .hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent-text); }
     .badge-company { background: #0a2218; color: #4a9e6b; }
-    .hero h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2; margin-bottom: 14px; letter-spacing: -.3px; }
-    .hero .subtitle { font-size: 15px; color: var(--text-muted); max-width: 600px; line-height: 1.75; }
-    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 40px 0; border-bottom: 0.5px solid var(--border); }
+    .hero h1 { font-size: clamp(26px, 4.4vw, 38px); font-weight: 500; line-height: 1.15; margin-bottom: 16px; letter-spacing: -.4px; }
+    .hero .subtitle { font-size: 16px; color: var(--text-muted); max-width: 620px; line-height: 1.75; }
+    .hero-facts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 28px; }
+    .fact .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 3px; }
+    .fact .v { font-size: 13.5px; color: var(--text); }
+
+    .hero-visual { padding: 30px 0 6px; }
+    .hero-visual video { display: block; width: 100%; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
+    .hero-visual p { font-size: 12.5px; color: var(--text-faint); margin-top: 11px; line-height: 1.6; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 36px 0; border-bottom: 0.5px solid var(--border); }
     .stat { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
-    .stat .n { font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
-    .stat .l { font-size: 12px; color: var(--text-muted); }
-    .section { padding: 40px 0; border-bottom: 0.5px solid var(--border); }
-    .section:last-child { border-bottom: none; }
-    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 20px; }
-    .section p { font-size: 15px; color: var(--text-muted); line-height: 1.75; margin-bottom: 12px; }
+    .stat .n { font-size: 20px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .stat .l { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ---------- sections ---------- */
+    .section { padding: 48px 0; border-bottom: 0.5px solid var(--border); }
+    .section:last-of-type { border-bottom: none; }
+    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 14px; }
+    .section h2 { font-size: 21px; font-weight: 500; letter-spacing: -.2px; margin-bottom: 16px; line-height: 1.3; }
+    .section h3 { font-size: 16px; font-weight: 500; margin: 34px 0 12px; }
+    .section p { font-size: 15px; color: var(--text-muted); line-height: 1.8; margin-bottom: 14px; max-width: 68ch; }
     .section p:last-child { margin-bottom: 0; }
+    .section p.lead { font-size: 16.5px; color: #c2d4e2; }
+    .section strong { color: var(--text); font-weight: 500; }
+
+    /* ---------- figures ---------- */
+    .fig { margin: 30px 0 6px; }
+    .fig video, .fig img { display: block; width: 100%; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
+    .fig figcaption { font-size: 12.5px; color: var(--text-faint); line-height: 1.65; margin-top: 11px; }
+    .fig figcaption a { color: var(--accent-text); text-decoration: none; border-bottom: 0.5px solid rgba(91,155,213,.35); }
+    .fig figcaption a:hover { color: var(--text); }
+
+    /* ---------- chapters ---------- */
+    .chapters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; list-style: none; }
+    .chapters button { font: inherit; font-size: 12.5px; color: var(--text-muted); background: var(--bg-secondary); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; transition: border-color .15s, color .15s; }
+    .chapters button:hover { color: var(--text); border-color: var(--border-hover); }
+    .chapters .t { color: var(--accent-text); font-variant-numeric: tabular-nums; margin-right: 7px; }
+
+    /* ---------- idea cards ---------- */
+    .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 26px 0 6px; }
+    .idea { background: var(--bg-secondary); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .idea .k { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--accent-text); margin-bottom: 9px; }
+    .idea h4 { font-size: 14.5px; font-weight: 500; margin-bottom: 7px; }
+    .idea p { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin: 0; }
+
+    /* ---------- callout ---------- */
+    .callout { border-left: 2px solid var(--accent); background: linear-gradient(90deg, rgba(55,138,221,.07), transparent 70%); border-radius: 0 var(--radius) var(--radius) 0; padding: 18px 22px; margin: 28px 0 6px; }
+    .callout p { margin: 0; color: #c2d4e2; font-size: 15px; }
+
+    /* ---------- steps ---------- */
+    .steps { list-style: none; display: flex; flex-direction: column; gap: 18px; margin-top: 22px; }
+    .step { display: flex; gap: 16px; }
+    .step-n { flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--accent-text); background: var(--accent-bg); border-radius: 6px; padding: 3px 9px; margin-top: 3px; }
+    .step h4 { font-size: 14.5px; font-weight: 500; margin-bottom: 5px; }
+    .step p { font-size: 14px; margin: 0; }
+
+    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 30px 24px; margin-top: 26px; }
     .stack { display: flex; flex-wrap: wrap; gap: 8px; }
     .stack-tag { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-muted); border: 0.5px solid var(--border); }
-    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 32px 24px; margin-top: 4px; }
+
+    .page-nav { display: flex; justify-content: space-between; gap: 16px; padding: 32px 0 8px; flex-wrap: wrap; }
+    .page-nav a { font-size: 13.5px; color: var(--text-muted); text-decoration: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 16px; transition: border-color .15s, color .15s; }
+    .page-nav a:hover { color: var(--text); border-color: var(--border-hover); }
+
     footer { text-align: center; padding: 24px 40px; font-size: 12px; color: var(--text-faint); border-top: 0.5px solid var(--border); margin-top: 40px; }
-    @media (max-width: 640px) { nav, .container { padding-left: 20px; padding-right: 20px; } .hero { padding: 40px 0 32px; } }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 720px) { .ideas { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) {
+      nav, .container { padding-left: 20px; padding-right: 20px; }
+      .hero { padding: 40px 0 32px; } .section { padding: 38px 0; }
+      .hero-facts { gap: 18px 28px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   </style>
 </head>
 <body>
@@ -55,6 +119,7 @@
 
   <div class="container">
 
+    <!-- ======================= HERO ======================= -->
     <div class="hero">
       <div class="hero-meta">
         <span class="badge">Physics simulation</span>
@@ -62,41 +127,196 @@
         <span class="badge">Deep Learning</span>
         <span class="badge badge-company">Thales · 2022</span>
       </div>
-      <h1>Electron Beam Trajectory<br>Prediction</h1>
+      <h1>Predicting where an electron<br>beam will go</h1>
       <p class="subtitle">
-        ML model predicting the trajectory of an electron beam from electron gun
-        parameters — using Monte Carlo simulations as a synthetic data source to
-        train AutoML and deep learning models at Thales.
+        A machine-learning surrogate for the electron optics of a vacuum tube: given the
+        design parameters of an electron gun, predict the trajectory of the beam it
+        produces — without running the physics simulation that normally answers that question.
       </p>
+      <div class="hero-facts">
+        <div class="fact"><div class="k">Role</div><div class="v">Data Scientist intern</div></div>
+        <div class="fact"><div class="k">Where</div><div class="v">Thales · Vélizy-Villacoublay</div></div>
+        <div class="fact"><div class="k">When</div><div class="v">May – Sep. 2022</div></div>
+        <div class="fact"><div class="k">Field</div><div class="v">Microwave vacuum electronics</div></div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <video autoplay muted loop playsinline preload="auto"
+             poster="../assets/twt/twt-loop-poster.jpg"
+             aria-label="Looping animation of an electron beam bunching inside a traveling-wave tube while the signal it amplifies grows along the tube">
+        <source src="../assets/twt/twt-loop.mp4" type="video/mp4">
+      </video>
+      <p>Electron bunches forming inside a traveling-wave tube, and the microwave signal
+         they amplify growing along it — the device this project's electron gun feeds.</p>
     </div>
 
     <div class="stats-row">
       <div class="stat"><div class="n">Monte Carlo</div><div class="l">Synthetic data generation (ANSYS)</div></div>
       <div class="stat"><div class="n">H2O</div><div class="l">AutoML benchmark across model families</div></div>
       <div class="stat"><div class="n">TensorFlow</div><div class="l">Deep learning trajectory model</div></div>
-      <div class="stat"><div class="n">Persalys</div><div class="l">Uncertainty quantification & sensitivity</div></div>
+      <div class="stat"><div class="n">Persalys</div><div class="l">Uncertainty quantification &amp; sensitivity</div></div>
     </div>
 
+    <!-- ======================= THE PROBLEM ======================= -->
     <div class="section">
-      <div class="section-label">Context</div>
-      <p>
-        Electron guns are used in high-precision industrial and defense systems at Thales.
-        Predicting how the beam trajectory responds to parameter changes typically requires
-        expensive physical simulations. The goal was to train an ML surrogate model
-        capable of replacing those simulations at inference time.
+      <div class="section-label">The problem</div>
+      <h2>Amplifying microwaves with a beam of electrons</h2>
+
+      <p class="lead">
+        Radars, satellite downlinks and electronic-warfare systems all need to turn a faint
+        microwave signal into a very strong one. Past a few hundred watts, and up into the tens
+        of gigahertz, that job still belongs to a vacuum device: the <strong>traveling-wave tube</strong>.
       </p>
       <p>
-        Since no historical dataset existed, Monte Carlo simulations were run using ANSYS
-        and Persalys to generate synthetic training data across the parameter space.
-        AutoML (H2O) was used to benchmark model families before exploring deep learning
-        architectures with TensorFlow.
+        Inside it, an electron gun fires a continuous, pencil-thin beam down the axis of the tube.
+        The signal to be amplified is wound around that beam as a helix of wire, which slows its
+        forward march down to the speed of the electrons themselves. Wave and beam then travel
+        together for the length of the tube — and the beam hands its energy over to the wave.
       </p>
+
+      <figure class="fig">
+        <video id="twt-video" controls playsinline preload="metadata"
+               poster="../assets/twt/twt-explainer-poster.jpg"
+               aria-label="Animated explainer of how a traveling-wave tube amplifies a microwave signal">
+          <source src="../assets/twt/twt-explainer.mp4" type="video/mp4">
+          Your browser cannot play this video.
+        </video>
+        <figcaption>
+          How a traveling-wave tube works — the beam, the slow-wave helix, the bunching and the gain.
+          Animation written for this page with <a href="https://www.manim.community/" target="_blank" rel="noopener">Manim</a>;
+          the electron dynamics are integrated from the equations of motion rather than drawn by hand
+          (<a href="https://github.com/MartinErwan/MartinErwan.github.io/blob/main/assets/manim/twt.py" target="_blank" rel="noopener">source</a>).
+          It illustrates the physics context, not the project's own simulation output.
+        </figcaption>
+        <ul class="chapters" id="twt-chapters">
+          <li><button type="button" data-t="CH1"><span class="t">CT1</span>The device</button></li>
+          <li><button type="button" data-t="CH2"><span class="t">CT2</span>The beam</button></li>
+          <li><button type="button" data-t="CH3"><span class="t">CT3</span>Slowing the wave down</button></li>
+          <li><button type="button" data-t="CH4"><span class="t">CT4</span>Bunching and gain</button></li>
+          <li><button type="button" data-t="CH5"><span class="t">CT5</span>Why the gun matters</button></li>
+        </ul>
+      </figure>
+
+      <div class="ideas">
+        <div class="idea">
+          <div class="k">Step 1</div>
+          <h4>Slow the wave down</h4>
+          <p>In free space the wave outruns the electrons several times over. Coiling the wire forces
+             it to take the long way round, dropping its forward speed to a fraction of <em>c</em> —
+             the speed of the beam.</p>
+        </div>
+        <div class="idea">
+          <div class="k">Step 2</div>
+          <h4>Bunch the electrons</h4>
+          <p>The axial field of the wave holds some electrons back and pushes others forward.
+             Within a few centimetres the smooth stream has become a train of dense bunches.</p>
+        </div>
+        <div class="idea">
+          <div class="k">Step 3</div>
+          <h4>Harvest the energy</h4>
+          <p>The beam is set slightly faster than the wave, so the bunches drift into the
+             decelerating phase and give up energy. The signal grows exponentially — 40 to 50 dB
+             end to end.</p>
+        </div>
+      </div>
+
+      <h3>And all of it rests on the gun</h3>
+      <p>
+        That exchange only works if the beam stays a thin, well-behaved pencil over the whole
+        length of the tube. Space charge pushes it apart, magnetic focusing squeezes it back,
+        and the balance between the two is decided at the source — by the cathode voltage, the
+        shape of the focusing electrode, the anode aperture, the field of the magnets. Get it
+        wrong and the beam scallops outward until it intercepts the helix: the intercepted
+        current becomes heat, and the tube is scrap.
+      </p>
+      <p>
+        Knowing where the beam actually goes means solving the trajectories — a Monte-Carlo
+        particle-tracking run in ANSYS, hours of CPU for a <em>single</em> configuration. That is
+        affordable when you want to check one design. It is not affordable when you want to
+        explore a design space.
+      </p>
+
+      <figure class="fig">
+        <video controls playsinline preload="metadata"
+               poster="../assets/twt/gun-problem-poster.jpg"
+               aria-label="Animated explainer of how electron gun parameters change the beam trajectory">
+          <source src="../assets/twt/gun-problem.mp4" type="video/mp4">
+          Your browser cannot play this video.
+        </video>
+        <figcaption>
+          A handful of gun parameters decide whether the beam threads the tube or burns it —
+          and every point in that parameter space costs a full physics run to evaluate.
+        </figcaption>
+      </figure>
+
+      <div class="callout">
+        <p>
+          Hence this project: run the expensive simulation a few hundred times, then let a model
+          learn the mapping from gun parameters to beam trajectory. A surrogate that answers in
+          milliseconds turns a verification tool into something you can put inside an
+          optimisation loop.
+        </p>
+      </div>
     </div>
 
+    <!-- ======================= APPROACH ======================= -->
     <div class="section">
-      <div class="section-label">Pipeline architecture</div>
+      <div class="section-label">Approach</div>
+      <h2>From a physics solver to a learned model</h2>
+      <p>
+        No historical dataset existed — nobody had logged thousands of gun designs. The training
+        data had to be manufactured, which made the design of experiments as much a part of the
+        work as the modelling itself.
+      </p>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step-n">01</span>
+          <div>
+            <h4>Generate the data</h4>
+            <p>Monte-Carlo sampling of the gun's parameter space, with the resulting beam
+               trajectories computed by the physics solver (ANSYS). Persalys drove the sampling
+               plans and the uncertainty &amp; sensitivity analysis, which also showed which
+               parameters the trajectory is actually sensitive to.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">02</span>
+          <div>
+            <h4>Find out what the data supports</h4>
+            <p>Rather than guessing an architecture, H2O AutoML was used to benchmark whole
+               families of models — linear models, random forests, gradient boosting, stacked
+               ensembles — on the same targets. That set the baseline any custom model had to beat.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">03</span>
+          <div>
+            <h4>Model the trajectory</h4>
+            <p>A neural network in TensorFlow mapping the gun parameter vector to the beam
+               trajectory, with the feature preparation, scaling and validation split built around
+               the structure of the simulated data.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">04</span>
+          <div>
+            <h4>Make it usable</h4>
+            <p>The trained surrogate replaces the solver at inference time: the same question that
+               took hours of CPU is answered in milliseconds, cheaply enough to sweep the
+               parameter space instead of sampling it.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <!-- ======================= PIPELINE ======================= -->
+    <div class="section">
+      <div class="section-label">Pipeline</div>
+      <h2>How the pieces fit together</h2>
       <div class="diagram-wrap">
-        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto" role="img" aria-label="Pipeline diagram: Monte Carlo simulation to feature preparation to AutoML and deep learning, producing a surrogate model">
           <defs>
             <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
               <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
@@ -138,6 +358,7 @@
       </div>
     </div>
 
+    <!-- ======================= STACK ======================= -->
     <div class="section">
       <div class="section-label">Stack</div>
       <div class="stack">
@@ -150,10 +371,33 @@
         <span class="stack-tag">NumPy / Pandas</span>
         <span class="stack-tag">Git</span>
       </div>
+
+      <div class="page-nav">
+        <a href="../index.html#projects">← All projects</a>
+        <a href="total.html">Next: acoustic deep learning at TotalEnergies →</a>
+      </div>
     </div>
 
   </div>
 
-  <footer>Erwan Martin · <a href="../index.html" style="color:var(--accent);text-decoration:none">erwan-martin.github.io</a></footer>
+  <footer>Erwan Martin · <a href="../index.html">martinerwan.github.io</a></footer>
+
+  <script>
+    // Chapter chips: jump the explainer to the start of a section.
+    document.querySelectorAll('#twt-chapters button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = document.getElementById('twt-video');
+        v.currentTime = parseFloat(b.dataset.t);
+        v.play();
+      });
+    });
+
+    // Respect reduced-motion: never autoplay looping figures for those users.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.querySelectorAll('video[autoplay]').forEach(function (v) {
+        v.removeAttribute('autoplay'); v.setAttribute('controls', ''); v.pause();
+      });
+    }
+  </script>
 </body>
 </html>
