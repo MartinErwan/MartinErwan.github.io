@@ -5,7 +5,7 @@
   },
   {
     "key": "b02",
-    "text": "A traveling-wave tube is a microwave amplifier. Radar, satellite links, electronic warfare \u2014 where solid-state amplifiers run out of power."
+    "text": "A traveling-wave tube is a microwave amplifier. Radar, satellite links, electronic warfare — where solid-state amplifiers run out of power."
   },
   {
     "key": "b03",
@@ -17,7 +17,7 @@
   },
   {
     "key": "b05",
-    "text": "Left alone the beam destroys itself \u2014 like charges repel."
+    "text": "Left alone the beam destroys itself — like charges repel."
   },
   {
     "key": "b06",
@@ -29,11 +29,11 @@
   },
   {
     "key": "b08",
-    "text": "A radio wave travels at the speed of light \u2014 far too fast to keep pace with the electrons."
+    "text": "A radio wave travels at the speed of light — far too fast to keep pace with the electrons."
   },
   {
     "key": "b09",
-    "text": "Wound into a helix, the signal must cover about four times more wire than the distance it moves forward. Its forward speed collapses to roughly a quarter of c \u2014 exactly the speed of the electrons."
+    "text": "Wound into a helix, the signal must cover about four times more wire than the distance it moves forward. Its forward speed collapses to roughly a quarter of c — exactly the speed of the electrons."
   },
   {
     "key": "b10",
@@ -49,7 +49,7 @@
   },
   {
     "key": "b13",
-    "text": "The beam is set a hair faster than the wave, so the bunches drift into the region that holds them back \u2014 and every electron that is slowed hands its energy straight to the wave."
+    "text": "The beam is set a hair faster than the wave, so the bunches drift into the region that holds them back — and every electron that is slowed hands its energy straight to the wave."
   },
   {
     "key": "b14",
@@ -57,10 +57,10 @@
   },
   {
     "key": "b15",
-    "text": "All of it rests on one thing: the beam the gun actually delivers. Cathode voltage, electrode angles, magnetic field \u2014 each one bends the trajectory."
+    "text": "None of it happens unless the beam stays a thin pencil the whole way — and what holds it is that stack of magnets. The focusing comes from their field being periodic, so every magnet has to match its neighbours."
   },
   {
     "key": "b16",
-    "text": "And that trajectory is exactly what this project set out to predict."
+    "text": "They never quite do. How much manufacturing scatter the tube can absorb, and which dimension it is most sensitive to, is what this project set out to measure."
   }
 ]

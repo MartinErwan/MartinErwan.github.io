@@ -102,6 +102,9 @@ R_CATH   = 0.38          # emitting radius of the (convergent) cathode
 WAVE_Y   = -1.95         # lane where the RF signal is drawn
 CAP_Y    = -3.25         # caption line
 TURNS    = 8
+H_PHASE  = PI            # coil starts at the bottom of a turn, where the leads arrive
+WIRE     = "#4b7ba3"     # the helix, unlit
+GLOW     = "#ffd27a"     # the signal running along it
 
 LAMBDA   = 1.36                      # on-screen RF wavelength
 K        = 2 * np.pi / LAMBDA
@@ -168,8 +171,8 @@ def build_tube():
     gun = VGroup(halo, cathode, focus, anode)
 
     # ---- slow-wave structure --------------------------------------------
-    helix = VMobject(stroke_color=ACCENT_LT, stroke_width=2.6)
-    helix.set_points_smoothly(helix_points(X_H0, X_H1))
+    helix = VMobject(stroke_color=WIRE, stroke_width=2.6)
+    helix.set_points_smoothly(helix_points(X_H0, X_H1, phase=H_PHASE))
 
     # ---- collector -------------------------------------------------------
     collector = Polygon(
@@ -314,6 +317,9 @@ class TWTScene(Scene):
 
     def init_chrome(self):
         self.script, self.beats = [], []
+        self.gain = ValueTracker(0.0)      # 0 = uniform wave, 1 = exponential growth
+        self.energy = ValueTracker(0.0)    # 0 = dark wire, 1 = signal running on it
+        self.leads_in = ValueTracker(0.0)  # the RF leads fade in with the ports
         self.act = T("", 21, ACCENT_LT, weight=MEDIUM).to_corner(UL, buff=0.5)
         self.cap = VGroup().move_to([0, CAP_Y, 0])
         self.add(self.act, self.cap)
@@ -347,72 +353,75 @@ class TWTScene(Scene):
             self.play(FadeOut(self.cap), run_time=0.3)
         self.cap = VGroup()
 
-    # -- wave layer --------------------------------------------------------
-    def make_wave_layer(self, gain=0.0, only_decel=False):
-        """Build (but do not animate in) the field bands and the RF trace.
+    # -- the signal, lit along the wire it travels -------------------------
+    def strength(self, x):
+        """Envelope of the wave: flat while `gain` is 0, exponential at 1."""
+        g = self.gain.get_value()
+        e = np.exp(np.clip(np.asarray(x, dtype=float) - X_H0, 0, None) / L_GAIN) / 9.0
+        return (1 - g) * 0.5 + g * e
 
-        `only_decel` shades just the half-cycles that hold the electrons back,
-        which needs no two-colour key to read.
+    def lit_circuit(self, nseg=300, y_port=-0.36):
+        """Input lead, helix, output lead: one wire, lit by the wave on it.
+
+        Each piece is lit by the phase of the wave where it sits *along the
+        wire*, so the light climbs the input lead, runs round every turn and
+        drops back down at the far end — the same picture as the figure on the
+        page, rather than a second way of drawing the same thing.
         """
         beam = self.beam
-        k, vph = beam.k, beam.v_phase
-        self.gain = ValueTracker(gain)    # 0 = uniform wave, 1 = exponential growth
+        pts = helix_points(X_H0, X_H1, samples=nseg + 1, phase=H_PHASE)
+        axial = np.linspace(X_H0, X_H1, nseg + 1)
+        ratio = helix_wire_length(TURNS) / (X_H1 - X_H0)    # wire per unit of tube
+        y_join = AXIS_Y - R_HELIX
 
-        def strength(x):
-            g = self.gain.get_value()
-            e = np.exp(np.clip(x - X_H0, 0, None) / L_GAIN) / 9.0
-            return (1 - g) * 0.5 + g * e
+        n_l = 20
+        step = (y_join - y_port) / n_l
+        pieces = []
+        lead_in = [np.array([X_H0, y, 0]) for y in np.linspace(y_port, y_join, n_l + 1)]
+        for j, (a, b) in enumerate(zip(lead_in[:-1], lead_in[1:])):
+            back = (n_l - j - 0.5) * step / ratio           # still short of the helix
+            pieces.append((a, b, X_H0 - back, X_H0, True))
+        for i in range(nseg):
+            pieces.append((pts[i], pts[i + 1], axial[i], axial[i], False))
+        lead_out = [np.array([X_H1, y, 0]) for y in np.linspace(y_join, y_port, n_l + 1)]
+        for j, (a, b) in enumerate(zip(lead_out[:-1], lead_out[1:])):
+            pieces.append((a, b, X_H1 + (j + 0.5) * step / ratio, X_H1, True))
 
-        # axial field of the wave, painted as bands inside the tube
-        n_band = 180
-        w = (X_H1 - X_H0) / n_band
-        bands = VGroup(*[
-            Rectangle(width=w * 1.02, height=2 * R_TUBE - 0.06, stroke_width=0,
-                      fill_color=ACCEL, fill_opacity=0.0)
-            .move_to([X_H0 + (i + 0.5) * w, AXIS_Y, 0]) for i in range(n_band)])
+        segs = VGroup(*[Line(a, b, stroke_color=WIRE, stroke_width=2.6)
+                        for a, b, _, _, _ in pieces])
+        base, glow = ManimColor(WIRE), ManimColor(GLOW)
 
         def paint(_):
-            t = beam.t
-            for i, b in enumerate(bands):
-                x = X_H0 + (i + 0.5) * w
-                s = np.sin(k * (x - vph * t))
-                # the force on an electron is -e E, so sin > 0 slows it down
-                if only_decel:
-                    b.set_fill(DECEL, opacity=0.52 * strength(x) * max(s, 0.0) ** 0.85)
-                else:
-                    b.set_fill(DECEL if s > 0 else ACCEL,
-                               opacity=0.02 + 0.46 * strength(x) * abs(s))
-        bands.add_updater(paint)
+            e, lead, t = self.energy.get_value(), self.leads_in.get_value(), beam.t
+            for seg, (_, _, x_eq, x_env, is_lead) in zip(segs, pieces):
+                bead = (0.5 * (1 + np.sin(beam.k * (x_eq - beam.v_phase * t)))) ** 4
+                g = e * bead * (0.45 + 0.55 * float(self.strength(x_env)))
+                seg.set_stroke(color=interpolate_color(base, glow, g),
+                               width=2.6 + 4.4 * g,
+                               opacity=(0.8 + 0.2 * g) * (lead if is_lead else 1.0))
+        segs.add_updater(paint)
         paint(None)
-        self.add(bands)
-        bands.set_z_index(-1)
 
-        # the RF signal itself, drawn in its own lane
-        amp = 0.62
+        ports = VGroup(*[Dot([x, y_port, 0], radius=0.055, color=ACCENT)
+                         for x in (X_H0, X_H1)])
+        return segs, ports
 
-        def wave_curve():
-            return FunctionGraph(
-                lambda x: WAVE_Y + amp * strength(x) * np.sin(k * (x - vph * beam.t)),
-                x_range=[X_H0, X_H1, 0.02], color=ACCENT_LT, stroke_width=3)
-
-        def envelope_curve(sgn):
-            return FunctionGraph(lambda x: WAVE_Y + sgn * amp * strength(x),
-                                 x_range=[X_H0, X_H1, 0.05],
-                                 color=ACCENT, stroke_width=1.4, stroke_opacity=0.45)
-
+    # -- the signal lane under the tube ------------------------------------
+    def make_wave_layer(self):
+        beam, amp = self.beam, 0.62
         base = DashedLine([X_H0, WAVE_Y, 0], [X_H1, WAVE_Y, 0], dash_length=0.08,
                           stroke_color=FAINT, stroke_width=1, stroke_opacity=0.4)
-        wave = always_redraw(wave_curve)
-        env_up = always_redraw(lambda: envelope_curve(+1))
-        env_dn = always_redraw(lambda: envelope_curve(-1))
-        wave_lbl = VGroup(T("the signal", 19, MUTED),
-                          T("on the helix", 19, MUTED)
-                          ).arrange(DOWN, buff=0.10).move_to([-5.55, WAVE_Y, 0])
-
-        self.bands = bands
-        self.wave_parts = (base, wave_lbl, wave, env_up, env_dn)
-        return bands, base, wave_lbl, wave, env_up, env_dn
-
+        wave = always_redraw(lambda: FunctionGraph(
+            lambda x: WAVE_Y + amp * float(self.strength(x))
+            * np.sin(beam.k * (x - beam.v_phase * beam.t)),
+            x_range=[X_H0, X_H1, 0.02], color=GLOW, stroke_width=3))
+        env = VGroup(*[always_redraw(lambda k=sgn: FunctionGraph(
+            lambda x: WAVE_Y + k * amp * float(self.strength(x)),
+            x_range=[X_H0, X_H1, 0.05], color=GLOW,
+            stroke_width=1.4, stroke_opacity=0.45)) for sgn in (1, -1)])
+        lbl = VGroup(T("the signal", 19, MUTED), T("on the helix", 19, MUTED)
+                     ).arrange(DOWN, buff=0.10).move_to([-5.55, WAVE_Y, 0])
+        return base, lbl, wave, env
 
 # --------------------------------------------------------------------------
 # Main explainer
@@ -423,6 +432,9 @@ class TravelingWaveTube(TWTScene):
         self.init_chrome()
         self.opening()
         self.tube = build_tube()
+        # the beam exists from the start so the wire knows the wave's numbers;
+        # its particles only join the scene in act 2
+        self.beam = Beam()
         self.act1_device()
         self.act2_beam()
         self.act3_slow_wave()
@@ -466,8 +478,12 @@ class TravelingWaveTube(TWTScene):
         in_sub = T("a few milliwatts", 16, FAINT).next_to(in_lbl, DOWN, buff=0.12)
         out_lbl = T("RF out", 19, ACCENT_LT).move_to([X_H1 - 0.15, -0.82, 0])
         out_sub = T("up to 100 000×  the power", 16, FAINT).next_to(out_lbl, DOWN, buff=0.12)
-        self.play(FadeIn(VGroup(tb.rf_in, in_lbl, in_sub)),
-                  FadeIn(VGroup(tb.rf_out, out_lbl, out_sub)), run_time=0.8)
+        # the plain coil becomes the wire the signal will run on, leads and all
+        self.circuit, self.ports = self.lit_circuit()
+        self.remove(tb.helix, tb.rf_in, tb.rf_out)
+        self.add(self.circuit)
+        self.play(self.leads_in.animate.set_value(1.0),
+                  FadeIn(VGroup(self.ports, in_lbl, in_sub, out_lbl, out_sub)), run_time=0.8)
 
         self.say("A traveling-wave tube is a microwave amplifier.",
                  "Radar, satellite links, electronic warfare — where solid-state amplifiers run out of power.",
@@ -486,7 +502,6 @@ class TravelingWaveTube(TWTScene):
         self.play(glow.animate.set_stroke(opacity=0.55), run_time=0.6,
                   rate_func=there_and_back_with_pause)
 
-        self.beam = Beam()
         self.beam.dots.add_updater(lambda m, dt: self.beam.step(dt))
         self.add(self.beam.dots)
         self.wait(1.6)
@@ -537,7 +552,7 @@ class TravelingWaveTube(TWTScene):
 
         # three turns of wire, and the same wire unrolled
         x3 = X_H0 + (X_H1 - X_H0) * 3 / TURNS
-        pts = helix_points(X_H0, x3, turns=3, samples=500)
+        pts = helix_points(X_H0, x3, turns=3, samples=500, phase=H_PHASE)
         seg = VMobject(stroke_color=WARN, stroke_width=3.5)
         seg.set_points_smoothly(pts)
         wire_len = helix_wire_length(3)
@@ -573,22 +588,15 @@ class TravelingWaveTube(TWTScene):
                  wait=2.0)
 
     def build_wave_layer(self):
-        bands, base, wave_lbl, wave, env_up, env_dn = self.make_wave_layer()
-        self.play(Create(base), FadeIn(wave_lbl), run_time=0.5)
-        self.add(wave, env_up, env_dn, bands)
-        self.play(FadeIn(bands), run_time=0.8)
-        self.wave_layer = VGroup(base, wave_lbl)
+        base, lbl, wave, env = self.make_wave_layer()
+        self.play(Create(base), FadeIn(lbl), run_time=0.5)
+        self.add(wave, env)
+        self.play(self.energy.animate.set_value(1.0), run_time=1.2)
+        self.wave_layer = VGroup(base, lbl)
 
     # -- 4 ---------------------------------------------------------------
     def act4_bunching(self):
         self.set_act("4 — The exchange")
-
-        sw_a = VGroup(Square(0.17, stroke_width=0, fill_color=ACCEL, fill_opacity=0.8),
-                      T("field pushes electrons forward", 17, MUTED)).arrange(RIGHT, buff=0.16)
-        sw_d = VGroup(Square(0.17, stroke_width=0, fill_color=DECEL, fill_opacity=0.8),
-                      T("field holds them back", 17, MUTED)).arrange(RIGHT, buff=0.16)
-        legend = VGroup(sw_a, sw_d).arrange(RIGHT, buff=0.9).move_to([0.3, -0.62, 0])
-        self.play(FadeIn(legend), run_time=0.6)
 
         self.say("The wave's own electric field sorts the beam: some electrons are slowed, some sped up.")
         self.play(self.beam.coupling.animate.set_value(1.0), run_time=2.0)
@@ -611,22 +619,27 @@ class TravelingWaveTube(TWTScene):
         ).arrange(DOWN, buff=0.16).move_to([5.75, WAVE_Y, 0])
         self.play(FadeIn(gain_box, shift=UP * 0.15), run_time=0.7)
         self.wait(2.0)
-        self.play(FadeOut(VGroup(legend, gain_box)), run_time=0.6)
+        self.play(FadeOut(gain_box), run_time=0.6)
 
     # -- closing -----------------------------------------------------------
     def closing(self):
         self.set_act("5 — And the hard part")
         self.play(self.beam.coupling.animate.set_value(0.35), run_time=1.0)
 
-        box = RoundedRectangle(width=2.5, height=2.5, corner_radius=0.15,
-                               stroke_color=WARN, stroke_width=2,
-                               fill_opacity=0).move_to([X_CATH + 1.0, AXIS_Y, 0])
-        self.play(Create(box), run_time=0.8)
-        self.say("All of it rests on one thing: the beam the gun actually delivers.",
-                 "Cathode voltage, electrode angles, magnetic field — each one bends the trajectory.",
+        magnets = getattr(self, "magnets", VGroup())
+        box = RoundedRectangle(width=X_H1 - X_H0 + 0.6, height=2 * (R_TUBE + 0.55),
+                               corner_radius=0.15, stroke_color=WARN, stroke_width=2,
+                               fill_opacity=0).move_to([(X_H0 + X_H1) / 2, AXIS_Y, 0])
+        self.play(Create(box), FadeIn(magnets), run_time=0.9)   # act 3 had put them away
+        self.say("None of it happens unless the beam stays a thin pencil the whole way — "
+                 "and what holds it is that stack of magnets.",
+                 "The focusing comes from their field being periodic, so every magnet has to "
+                 "match its neighbours.",
                  wait=3.0)
         self.play(FadeOut(box), run_time=0.5)
-        self.say("And that trajectory is exactly what this project set out to predict.", wait=2.6)
+        self.say("They never quite do. How much manufacturing scatter the tube can absorb, and "
+                 "which dimension it is most sensitive to, is what this project set out to "
+                 "measure.", wait=2.6)
         self.play(*[FadeOut(m) for m in self.mobjects], run_time=1.0)
         self.wait(0.4)
 
