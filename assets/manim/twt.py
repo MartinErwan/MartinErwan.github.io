@@ -29,7 +29,27 @@ envelope E(x), which is what produces the bunching you see.
 
 from manim import *
 import numpy as np
+import json
+import os
 import textwrap
+from pathlib import Path
+
+# --------------------------------------------------------------------------
+# Narration
+#
+# The captions are the script. A collecting pass (TWT_COLLECT=1) writes them
+# out, `narrate.py` turns them into clips, and the real render then holds each
+# caption for exactly as long as its clip lasts and logs when it started, so
+# the audio can be laid back onto the finished frames.
+# --------------------------------------------------------------------------
+NARRATION = Path(__file__).resolve().parent / "narration"
+COLLECT = os.environ.get("TWT_COLLECT") == "1"
+DURATIONS = (json.loads((NARRATION / "durations.json").read_text())
+             if (NARRATION / "durations.json").exists() else {})
+
+READING_SPEED = 13.0     # characters per second, when there is no clip to time to
+BEAT_GAP = 0.6           # breath between one caption and the next
+
 
 # --------------------------------------------------------------------------
 # Palette — matches the website (martinerwan.github.io)
@@ -273,7 +293,27 @@ class TWTScene(Scene):
         """
         super().wait(duration, stop_condition=stop_condition, frozen_frame=frozen_frame)
 
+    # -- narration ---------------------------------------------------------
+    def hold_for(self, text, minimum=0.0):
+        """How long this beat stays up: as long as it is spoken, or read."""
+        self._beat = getattr(self, "_beat", 0) + 1
+        key = f"b{self._beat:02d}"
+        if COLLECT:
+            self.script.append({"key": key, "text": text})
+        spoken = DURATIONS.get(key)
+        if spoken is None:
+            spoken = len(text) / READING_SPEED + 0.9
+        self.beats.append({"key": key, "t": round(self.renderer.time, 3)})
+        return max(spoken + BEAT_GAP, minimum)
+
+    def write_narration(self):
+        NARRATION.mkdir(exist_ok=True)
+        name = "script.json" if COLLECT else "beats.json"
+        payload = self.script if COLLECT else self.beats
+        (NARRATION / name).write_text(json.dumps(payload, indent=2))
+
     def init_chrome(self):
+        self.script, self.beats = [], []
         self.act = T("", 21, ACCENT_LT, weight=MEDIUM).to_corner(UL, buff=0.5)
         self.cap = VGroup().move_to([0, CAP_Y, 0])
         self.add(self.act, self.cap)
@@ -300,8 +340,7 @@ class TWTScene(Scene):
         self.remove(self.cap)
         self.cap = grp
         self.add(self.cap)
-        if wait:
-            self.wait(wait)
+        self.wait(self.hold_for(line if not sub else f"{line} {sub}", minimum=wait))
 
     def clear_caption(self):
         if len(self.cap):
@@ -389,6 +428,7 @@ class TravelingWaveTube(TWTScene):
         self.act3_slow_wave()
         self.act4_bunching()
         self.closing()
+        self.write_narration()
 
     # -- 0 ---------------------------------------------------------------
     def opening(self):
@@ -399,7 +439,8 @@ class TravelingWaveTube(TWTScene):
         rule.next_to(sub, DOWN, buff=0.45)
         self.play(FadeIn(title, shift=UP * 0.25), run_time=1.0)
         self.play(FadeIn(sub), Create(rule), run_time=0.8)
-        self.wait(1.5)
+        self.wait(self.hold_for("Inside a traveling-wave tube: how a microwave signal "
+                                "surfs on a beam of electrons.", minimum=1.5))
         self.play(FadeOut(VGroup(title, sub, rule), shift=UP * 0.3), run_time=0.7)
 
     # -- 1 ---------------------------------------------------------------
@@ -610,6 +651,7 @@ class ElectronGunProblem(TWTScene):
         self.act_failures()
         self.act_cost()
         self.act_surrogate()
+        self.write_narration()
 
     # -- the picture -------------------------------------------------------
     def build_stage(self):
