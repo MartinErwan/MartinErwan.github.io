@@ -37,7 +37,7 @@
     .fact .v { font-size: 13.5px; color: var(--text); }
 
     .hero-visual { padding: 30px 0 6px; }
-    .hero-visual video { display: block; width: 100%; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
+    .hero-visual video { display: block; width: 100%; aspect-ratio: 8 / 3; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
     .hero-visual p { font-size: 12.5px; color: var(--text-faint); margin-top: 11px; line-height: 1.6; }
 
     .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 36px 0; border-bottom: 0.5px solid var(--border); }
@@ -58,7 +58,7 @@
 
     /* ---------- figures ---------- */
     .fig { margin: 30px 0 6px; }
-    .fig video, .fig img { display: block; width: 100%; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
+    .fig video, .fig img { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
     .fig figcaption { font-size: 12.5px; color: var(--text-faint); line-height: 1.65; margin-top: 11px; }
     .fig figcaption a { color: var(--accent-text); text-decoration: none; border-bottom: 0.5px solid rgba(91,155,213,.35); }
     .fig figcaption a:hover { color: var(--text); }
@@ -190,11 +190,11 @@
           It illustrates the physics context, not the project's own simulation output.
         </figcaption>
         <ul class="chapters" id="twt-chapters">
-          <li><button type="button" data-t="CH1"><span class="t">CT1</span>The device</button></li>
-          <li><button type="button" data-t="CH2"><span class="t">CT2</span>The beam</button></li>
-          <li><button type="button" data-t="CH3"><span class="t">CT3</span>Slowing the wave down</button></li>
-          <li><button type="button" data-t="CH4"><span class="t">CT4</span>Bunching and gain</button></li>
-          <li><button type="button" data-t="CH5"><span class="t">CT5</span>Why the gun matters</button></li>
+          <li><button type="button" data-t="0"><span class="t">0:00</span>The device</button></li>
+          <li><button type="button" data-t="13"><span class="t">0:13</span>The beam</button></li>
+          <li><button type="button" data-t="29"><span class="t">0:29</span>Slowing the wave down</button></li>
+          <li><button type="button" data-t="45"><span class="t">0:45</span>Bunching and gain</button></li>
+          <li><button type="button" data-t="68"><span class="t">1:08</span>Why the gun matters</button></li>
         </ul>
       </figure>
 
