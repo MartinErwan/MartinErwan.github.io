@@ -8,6 +8,7 @@ Source of the explainer animations on
 |---|---|---|
 | `TravelingWaveTube` | The full explainer: the tube, the electron beam and its focusing, why the helix slows the wave down, bunching and exponential gain | `assets/twt/twt-explainer.mp4` |
 | `ElectronGunProblem` | How gun parameters bend the beam trajectory, what interception costs, and why a learned surrogate was needed | `assets/twt/gun-problem.mp4` + `gun-problem-still.jpg` |
+| `TWTLoop3D` (in `twt3d.py`) | The same figure with a real helix, seen from a camera level with the axis: the signal spirals round the beam instead of oscillating past it | `assets/twt/twt-loop-3d.gif` |
 | `TWTLoop` | The labelled figure used on the page. The signal is lit along the circuit it really travels — in at one RF connector, round every turn of the helix, out at the other — so the slow-wave trick is visible rather than asserted; its amplitude is plotted in a lane of its own below. Loops exactly: the wave covers the whole wire in one loop, and six wavelengths fit on it | `assets/twt/twt-loop.gif` |
 
 ## Rendering
