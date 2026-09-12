@@ -320,6 +320,7 @@ class TWTScene(Scene):
         self.gain = ValueTracker(0.0)      # 0 = uniform wave, 1 = exponential growth
         self.energy = ValueTracker(0.0)    # 0 = dark wire, 1 = signal running on it
         self.leads_in = ValueTracker(0.0)  # the RF leads fade in with the ports
+        self.lane_op = ValueTracker(1.0)   # the signal lane, faded out for the closing
         self.act = T("", 21, ACCENT_LT, weight=MEDIUM).to_corner(UL, buff=0.5)
         self.cap = VGroup().move_to([0, CAP_Y, 0])
         self.add(self.act, self.cap)
@@ -414,11 +415,12 @@ class TWTScene(Scene):
         wave = always_redraw(lambda: FunctionGraph(
             lambda x: WAVE_Y + amp * float(self.strength(x))
             * np.sin(beam.k * (x - beam.v_phase * beam.t)),
-            x_range=[X_H0, X_H1, 0.02], color=GLOW, stroke_width=3))
+            x_range=[X_H0, X_H1, 0.02], color=GLOW, stroke_width=3,
+            stroke_opacity=self.lane_op.get_value()))
         env = VGroup(*[always_redraw(lambda k=sgn: FunctionGraph(
             lambda x: WAVE_Y + k * amp * float(self.strength(x)),
-            x_range=[X_H0, X_H1, 0.05], color=GLOW,
-            stroke_width=1.4, stroke_opacity=0.45)) for sgn in (1, -1)])
+            x_range=[X_H0, X_H1, 0.05], color=GLOW, stroke_width=1.4,
+            stroke_opacity=0.45 * self.lane_op.get_value())) for sgn in (1, -1)])
         lbl = VGroup(T("the signal", 19, MUTED), T("on the helix", 19, MUTED)
                      ).arrange(DOWN, buff=0.10).move_to([-5.55, WAVE_Y, 0])
         return base, lbl, wave, env
@@ -593,6 +595,7 @@ class TravelingWaveTube(TWTScene):
         self.add(wave, env)
         self.play(self.energy.animate.set_value(1.0), run_time=1.2)
         self.wave_layer = VGroup(base, lbl)
+        self.lane_live = (wave, env)
 
     # -- 4 ---------------------------------------------------------------
     def act4_bunching(self):
@@ -625,6 +628,10 @@ class TravelingWaveTube(TWTScene):
     def closing(self):
         self.set_act("5 — And the hard part")
         self.play(self.beam.coupling.animate.set_value(0.35), run_time=1.0)
+
+        self.play(self.lane_op.animate.set_value(0.0),
+                  FadeOut(self.wave_layer), run_time=0.6)
+        self.remove(*self.lane_live)          # its caption needs the room
 
         magnets = getattr(self, "magnets", VGroup())
         box = RoundedRectangle(width=X_H1 - X_H0 + 0.6, height=2 * (R_TUBE + 0.55),
