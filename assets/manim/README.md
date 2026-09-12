@@ -7,7 +7,7 @@ Source of the explainer animations on
 | Scene | What it shows | Used as |
 |---|---|---|
 | `TravelingWaveTube` | The full explainer: the tube, the electron beam and its focusing, why the helix slows the wave down, bunching and exponential gain | `assets/twt/twt-explainer.mp4` |
-| `ElectronGunProblem` | How gun parameters bend the beam trajectory, what interception costs, and why a learned surrogate was needed | `assets/twt/gun-problem.mp4` + `gun-problem-still.jpg` |
+| `MagnetScatter` (in `magnets.py`) | What the project is actually about: scale the manufacturing scatter of the focusing magnets up and back down, and watch the field lose its periodicity, the beam envelope scallop into the helix, and the distribution of beam quality spread past the wall | `assets/twt/magnet-tolerance.gif` |
 | `TWTLoop3D` (in `twt3d.py`) | The same figure with a real helix, seen from a camera level with the axis: the signal spirals round the beam instead of oscillating past it | `assets/twt/twt-loop-3d.gif` |
 | `TWTLoop` | The labelled figure used on the page. The signal is lit along the circuit it really travels — in at one RF connector, round every turn of the helix, out at the other — so the slow-wave trick is visible rather than asserted; its amplitude is plotted in a lane of its own below. Loops exactly: the wave covers the whole wire in one loop, and six wavelengths fit on it | `assets/twt/twt-loop.gif` |
 

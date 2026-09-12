@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Electron Beam Prediction — Erwan Martin</title>
-  <meta name="description" content="Machine-learning surrogate predicting the trajectory of an electron beam from electron-gun parameters, trained on Monte-Carlo physics simulations at Thales." />
+  <title>Magnet Tolerances &amp; Beam Quality — Erwan Martin</title>
+  <meta name="description" content="A sensitivity study at Thales: how manufacturing scatter in a traveling-wave tube's focusing magnets propagates to beam quality, with a learned surrogate standing in for the Monte-Carlo physics runs." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -113,16 +113,17 @@
     <!-- ======================= HERO ======================= -->
     <div class="hero">
       <div class="hero-meta">
-        <span class="badge">Physics simulation</span>
+        <span class="badge">Uncertainty quantification</span>
+        <span class="badge">Sensitivity analysis</span>
         <span class="badge">AutoML</span>
         <span class="badge">Deep Learning</span>
         <span class="badge badge-company">Thales · 2022</span>
       </div>
-      <h1>Predicting where an electron<br>beam will go</h1>
+      <h1>What a magnet tolerance costs<br>an electron beam</h1>
       <p class="subtitle">
-        A machine-learning surrogate for the electron optics of a vacuum tube: given the
-        design parameters of an electron gun, predict the trajectory of the beam it
-        produces — without running the physics simulation that normally answers that question.
+        A sensitivity study on a microwave vacuum tube: how far the manufacturing scatter of
+        its focusing magnets propagates — through the electron beam, and into the signal the
+        tube amplifies — with a learned surrogate standing in for a physics run that takes hours.
       </p>
       <div class="hero-facts">
         <div class="fact"><div class="k">Role</div><div class="v">Data Scientist intern</div></div>
@@ -133,10 +134,10 @@
     </div>
 
     <div class="stats-row">
-      <div class="stat"><div class="n">Monte Carlo</div><div class="l">Synthetic data generation (ANSYS)</div></div>
+      <div class="stat"><div class="n">Persalys</div><div class="l">Tolerances as distributions; sensitivity analysis</div></div>
+      <div class="stat"><div class="n">ANSYS</div><div class="l">Electron-optics run behind every draw</div></div>
       <div class="stat"><div class="n">H2O</div><div class="l">AutoML benchmark across model families</div></div>
-      <div class="stat"><div class="n">TensorFlow</div><div class="l">Deep learning trajectory model</div></div>
-      <div class="stat"><div class="n">Persalys</div><div class="l">Uncertainty quantification &amp; sensitivity</div></div>
+      <div class="stat"><div class="n">TensorFlow</div><div class="l">Neural-network surrogate</div></div>
     </div>
 
     <!-- ======================= THE PROBLEM ======================= -->
@@ -197,39 +198,54 @@
         </div>
       </div>
 
-      <h3>And all of it rests on the gun</h3>
+      <h3>And the beam is only as good as the magnets</h3>
       <p>
-        That exchange only works if the beam stays a thin, well-behaved pencil over the whole
-        length of the tube. Space charge pushes it apart, magnetic focusing squeezes it back,
-        and the balance between the two is decided at the source — by the cathode voltage, the
-        shape of the focusing electrode, the anode aperture, the field of the magnets. Get it
-        wrong and the beam scallops outward until it intercepts the helix: the intercepted
-        current becomes heat, and the tube is scrap.
+        A traveling-wave tube pinches its beam with a stack of permanent magnets — rings of
+        alternating polarity, one after another down the tube. The focusing does not come from
+        any one of them; it comes from the field being <strong>periodic</strong>. Break the
+        periodicity and the beam stops being held.
       </p>
       <p>
-        Knowing where the beam actually goes means solving the trajectories — a Monte-Carlo
-        particle-tracking run in ANSYS, hours of CPU for a <em>single</em> configuration. That is
-        affordable when you want to check one design. It is not affordable when you want to
-        explore a design space.
+        Manufacturing breaks it. Magnets come off the line with dimensional scatter — a little
+        under or over nominal — and every deviation leaves a dent in the field the beam travels
+        through. The envelope starts to scallop, the ripple grows, and in the tail of the
+        distribution the beam grazes the helix: intercepted current, local heating, and gain lost
+        from the very signal the tube exists to amplify.
+      </p>
+      <p>
+        So the question is not <em>does this design work</em>. It is: <strong>how much scatter can
+        the tube absorb before the beam degrades, and which dimension is it most sensitive to?</strong>
+        That is a question about a distribution rather than about a single design — which is
+        exactly what makes it expensive.
       </p>
 
       <figure class="fig">
-        <img src="../assets/twt/gun-problem-still.jpg" width="1100" height="474"
-             alt="A mis-focused electron beam scalloping outward until it strikes the helix wall, with the four gun parameters shown as sliders below.">
+        <picture>
+          <source srcset="../assets/twt/magnet-tolerance-still.jpg" media="(prefers-reduced-motion: reduce)">
+          <img src="../assets/twt/magnet-tolerance.gif" width="900" height="484"
+               alt="Animated diagram: as the size scatter of the focusing magnets grows, the field along the axis loses its periodicity, the beam envelope scallops until it touches the helix wall, and the distribution of peak beam radius over 400 magnet stacks spreads past the wall.">
+        </picture>
         <figcaption>
-          A mis-set gun: the beam scallops outward until it strikes the helix, and the intercepted
-          current burns it. Four parameters decide it — and every point in that space costs a full
-          physics run to evaluate. Animated version:
-          <a href="../assets/twt/gun-problem.mp4">37-second clip</a>.
+          One pattern of manufacturing deviations, scaled up and back down. The beam envelope is
+          integrated from the paraxial equation for periodic focusing —
+          <em>r″ = K/r − κB(z)²r</em> — and the histogram is that same equation run over 400 draws
+          of the magnet deviations at the scatter currently on screen: a Monte-Carlo study in
+          miniature. The scale is schematic, not a real tolerance budget
+          (<a href="https://github.com/MartinErwan/MartinErwan.github.io/blob/main/assets/manim/magnets.py" target="_blank" rel="noopener">source</a>).
         </figcaption>
       </figure>
 
+      <p>
+        Every draw in that histogram is one stack of magnets sampled from its tolerances, and one
+        full electron-optics run in ANSYS: hours of CPU. A Monte-Carlo study that converges wants
+        thousands of them, and a sensitivity analysis wants thousands more.
+      </p>
+
       <div class="callout">
         <p>
-          Hence this project: run the expensive simulation a few hundred times, then let a model
-          learn the mapping from gun parameters to beam trajectory. A surrogate that answers in
-          milliseconds turns a verification tool into something you can put inside an
-          optimisation loop.
+          Hence the surrogate: run the expensive simulation a few hundred times, let a model learn
+          the mapping from magnet geometry to beam quality, and run the Monte-Carlo on the model
+          instead. Milliseconds a draw turns a study you cannot afford into one you can converge.
         </p>
       </div>
     </div>
@@ -239,47 +255,55 @@
       <div class="section-label">Approach</div>
       <h2>From a physics solver to a learned model</h2>
       <p>
-        No historical dataset existed — nobody had logged thousands of gun designs. The training
-        data had to be manufactured, which made the design of experiments as much a part of the
-        work as the modelling itself.
+        No historical dataset existed — nobody had logged thousands of magnet stacks and the beams
+        they produce. The training data had to be manufactured, which made the design of
+        experiments as much a part of the work as the modelling.
       </p>
 
       <ol class="steps">
         <li class="step">
           <span class="step-n">01</span>
           <div>
-            <h4>Generate the data</h4>
-            <p>Monte-Carlo sampling of the gun's parameter space, with the resulting beam
-               trajectories computed by the physics solver (ANSYS). Persalys drove the sampling
-               plans and the uncertainty &amp; sensitivity analysis, which also showed which
-               parameters the trajectory is actually sensitive to.</p>
+            <h4>Describe the uncertainty</h4>
+            <p>The magnet dimensions stop being single values and become probability
+               distributions, one per manufacturing tolerance. Persalys (the OpenTURNS front end)
+               carries that description and drives the sampling plans.</p>
           </div>
         </li>
         <li class="step">
           <span class="step-n">02</span>
           <div>
-            <h4>Find out what the data supports</h4>
-            <p>Rather than guessing an architecture, H2O AutoML was used to benchmark whole
-               families of models — linear models, random forests, gradient boosting, stacked
-               ensembles — on the same targets. That set the baseline any custom model had to beat.</p>
+            <h4>Buy the data</h4>
+            <p>Monte-Carlo draws from those distributions, each one a full electron-optics run in
+               ANSYS, each returning the beam that stack of magnets actually produces. This is the
+               step that costs hours, and the reason everything downstream exists.</p>
           </div>
         </li>
         <li class="step">
           <span class="step-n">03</span>
           <div>
-            <h4>Model the trajectory</h4>
-            <p>A neural network in TensorFlow mapping the gun parameter vector to the beam
-               trajectory, with the feature preparation, scaling and validation split built around
-               the structure of the simulated data.</p>
+            <h4>Find out what the data supports</h4>
+            <p>Rather than guessing an architecture, H2O AutoML benchmarks whole families of
+               models — linear models, random forests, gradient boosting, stacked ensembles — on
+               the same targets. That sets the baseline any custom model has to beat.</p>
           </div>
         </li>
         <li class="step">
           <span class="step-n">04</span>
           <div>
-            <h4>Make it usable</h4>
-            <p>The trained surrogate replaces the solver at inference time: the same question that
-               took hours of CPU is answered in milliseconds, cheaply enough to sweep the
-               parameter space instead of sampling it.</p>
+            <h4>Model it</h4>
+            <p>A neural network in TensorFlow mapping magnet geometry to beam quality, with the
+               feature preparation, scaling and validation split built around the structure of
+               the simulated data.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">05</span>
+          <div>
+            <h4>Ask the question the study was for</h4>
+            <p>With a surrogate answering in milliseconds, the Monte-Carlo can run at a sample
+               size the solver could never reach — enough to see the distribution of beam quality
+               and to rank which magnet dimension the tube is most sensitive to.</p>
           </div>
         </li>
       </ol>
@@ -290,7 +314,7 @@
       <div class="section-label">Pipeline</div>
       <h2>How the pieces fit together</h2>
       <div class="diagram-wrap">
-        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto" role="img" aria-label="Pipeline diagram: Monte Carlo simulation to feature preparation to AutoML and deep learning, producing a surrogate model">
+        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto" role="img" aria-label="Pipeline diagram: magnet tolerances to Monte-Carlo sampling and ANSYS runs, to AutoML and deep learning, producing a surrogate used for the sensitivity study">
           <defs>
             <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
               <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
@@ -309,13 +333,13 @@
           <line x1="500" y1="58" x2="558" y2="85" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
           <line x1="500" y1="132" x2="558" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
 
-          <text x="80" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Monte Carlo sim.</text>
-          <text x="80" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">ANSYS · Persalys</text>
-          <text x="80" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Synthetic dataset</text>
+          <text x="80" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Magnet tolerances</text>
+          <text x="80" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">dimensions as</text>
+          <text x="80" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">distributions</text>
 
-          <text x="260" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Feature prep</text>
-          <text x="260" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Gun parameters</text>
-          <text x="260" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">→ trajectory (x,y,z)</text>
+          <text x="260" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Monte Carlo</text>
+          <text x="260" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Persalys sampling</text>
+          <text x="260" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">ANSYS beam runs</text>
 
           <text x="435" y="50" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">AutoML</text>
           <text x="435" y="65" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">H2O benchmark</text>
@@ -326,8 +350,8 @@
           <text x="435" y="150" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">MLP architecture</text>
 
           <text x="625" y="89" text-anchor="middle" font-size="11" fill="#5b9bd5" font-family="system-ui">Surrogate model</text>
-          <text x="625" y="104" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Replaces physical</text>
-          <text x="625" y="117" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">simulation</text>
+          <text x="625" y="104" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Sensitivity study at</text>
+          <text x="625" y="117" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Monte-Carlo scale</text>
         </svg>
       </div>
     </div>
