@@ -35,6 +35,26 @@ ffmpeg -framerate 30 -start_number 0 -i TWTLoop%04d.png \
 gifsicle -O3 --lossy=25 raw.gif -o twt-loop.gif
 ```
 
+## Narration
+
+The long clip is spoken. The captions are the script, so the two can never
+drift apart:
+
+```bash
+TWT_COLLECT=1 manim --dry_run twt.py TravelingWaveTube   # captions -> script.json
+python narrate.py --voice /path/to/en-us-ryan-high.onnx  # -> audio/*.wav, durations.json
+manim -r 1600,900 --fps 30 --format png twt.py TravelingWaveTube
+python narrate.py --mix --video silent.mp4 --out narrated.mp4
+```
+
+Each caption is held for exactly as long as its clip lasts, and the render
+logs the moment each one appeared (`beats.json`) so the clips land on the
+right frames. Without `durations.json` the scene falls back to a reading-speed
+estimate and still renders on its own.
+
+Voice: [Piper](https://github.com/rhasspy/piper), `en_US-ryan-high`. That model
+is trained on RyanSpeech, which is CC BY-NC-SA 4.0 — personal use only.
+
 ## Note on the physics
 
 The bunching in act 4 is integrated, not drawn: every macro-particle obeys

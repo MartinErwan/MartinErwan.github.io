@@ -86,7 +86,7 @@ def mix(video, out):
     subprocess.run(
         ["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", graph,
          "-map", "0:v", "-map", "[out]", "-c:v", "copy",
-         "-c:a", "aac", "-b:a", "128k", "-shortest", str(out)], check=True)
+         "-c:a", "aac", "-b:a", "128k", str(out)], check=True)
     print(f"wrote {out}")
 
 
