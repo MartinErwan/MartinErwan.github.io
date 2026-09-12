@@ -90,21 +90,21 @@ V_BEAM   = 1.06 * V_PHASE            # beam slightly faster than the wave
 L_GAIN   = (X_H1 - X_H0) / np.log(9) # e-folding length of the growing wave
 
 
-def helix_points(x0, x1, radius=R_HELIX, turns=TURNS, samples=900):
+def helix_points(x0, x1, radius=R_HELIX, turns=TURNS, samples=900, phase=0.0):
     """Side view of a helix wound along the x axis, with a touch of depth."""
-    th = np.linspace(0, turns * TAU, samples)
-    x = x0 + (x1 - x0) * th / (turns * TAU) + 0.92 * radius * np.sin(th)
+    th = np.linspace(0, turns * TAU, samples) + phase
+    x = x0 + (x1 - x0) * (th - phase) / (turns * TAU) + 0.92 * radius * np.sin(th)
     y = AXIS_Y + radius * np.cos(th)
     return np.stack([x, y, np.zeros_like(x)], axis=1)
 
 
-def helix_samples(n, x0=X_H0, x1=X_H1, radius=R_HELIX, turns=TURNS):
+def helix_samples(n, x0=X_H0, x1=X_H1, radius=R_HELIX, turns=TURNS, phase=0.0):
     """Points along the drawn helix, paired with the axial position of each.
 
     The wire is sampled uniformly in turn angle, so the index is also uniform
     in *arc length along the wire* — which is what the travelling wave runs on.
     """
-    pts = helix_points(x0, x1, radius=radius, turns=turns, samples=n)
+    pts = helix_points(x0, x1, radius=radius, turns=turns, samples=n, phase=phase)
     axial = np.linspace(x0, x1, n)
     return pts, axial
 
@@ -794,11 +794,12 @@ class TWTLoop(TWTScene):
     T_LOOP = 7.2                                  # seconds, an exact loop
     LAM    = (X_H1 - X_H0) / 6                    # six wavelengths of helix
     VPH    = (X_H1 - X_H0) / T_LOOP               # crossed in one loop
-    AMP    = 0.48                                 # drawn amplitude at the output
+    AMP    = 0.55                                 # amplitude drawn in the signal lane
     NSEG   = 360                                  # pieces the wire is cut into
+    Y_PORT = -0.95                                # where the RF connectors sit
 
     WIRE   = "#3e6486"                            # the wire, unlit
-    GLOW   = "#ffd27a"                            # the wave running along it
+    GLOW   = "#ffd27a"                            # the signal running along it
 
     def strength(self, x):
         """Envelope of the wave: it grows exponentially down the tube."""
@@ -810,56 +811,88 @@ class TWTLoop(TWTScene):
     # ----------------------------------------------------------------------
     def construct(self):
         tube = build_tube()
-        tube.remove(tube.helix)                   # replaced by the lit version
+        for part in (tube.helix, tube.rf_in, tube.rf_out):
+            tube.remove(part)                     # replaced by the lit circuit
         self.beam = Beam(v_phase=self.VPH, lam=self.LAM)
         self.beam.coupling.set_value(1.0)
 
-        wire = self.lit_helix()
+        circuit, ports = self.lit_circuit()
         magnets = self.magnet_row()
-        wave = always_redraw(self.wave_curve)
+        lane = self.signal_lane()
         chrome = self.annotate()
 
         dt = 1 / config.frame_rate
         for _ in range(int(round(2 * self.T_LOOP / dt))):   # let the bunches settle
             self.beam.step(dt)
 
-        self.add(tube, magnets, wire, wave, self.beam.dots, chrome)
+        self.add(tube, magnets, circuit, ports, self.beam.dots, lane, chrome)
         self.beam.dots.add_updater(lambda m, dt: self.beam.step(dt))
         self.wait(self.T_LOOP)
 
-    # -- the wave, running along the wire itself ---------------------------
-    def lit_helix(self):
-        """The helix cut into short pieces, each lit by the wave passing through it.
+    # -- the signal, lit along the circuit it actually travels -------------
+    def lit_circuit(self):
+        """Input lead, helix, output lead: one wire, lit by the wave on it.
 
-        The signal moves along the *wire* at the speed of light. Six wavelengths
-        fit on the wire of the whole helix, and the wave covers that wire in one
-        loop — so the lit beads slide right round every turn while the pattern
-        as a whole only creeps forward, at the speed of the beam. That gap is
-        the whole point of a slow-wave structure.
+        Each piece is lit by the phase of the wave at its own arc length along
+        the wire. The wave covers the 31 units of wire in one loop while only
+        advancing the 8 units of tube length — which is the whole point of a
+        slow-wave structure, and why it keeps pace with the electrons.
         """
-        pts, axial = helix_samples(self.NSEG + 1)
-        segs = VGroup(*[Line(pts[i], pts[i + 1], stroke_color=self.WIRE,
-                             stroke_width=1.8) for i in range(self.NSEG)])
+        pts, axial = helix_samples(self.NSEG + 1, phase=PI)   # starts at the bottom
+        s_helix = helix_wire_length(TURNS)
+        ds_h = s_helix / self.NSEG
+        y_join = AXIS_Y - R_HELIX                            # where the leads meet it
+
+        n_l = 24
+        ds_l = (y_join - self.Y_PORT) / n_l
+        lead_in = [np.array([X_H0, y, 0]) for y in np.linspace(self.Y_PORT, y_join, n_l + 1)]
+        lead_out = [np.array([X_H1, y, 0]) for y in np.linspace(y_join, self.Y_PORT, n_l + 1)]
+
+        pieces, s = [], 0.0
+        for a, b in zip(lead_in[:-1], lead_in[1:]):
+            pieces.append((a, b, s + ds_l / 2, self.strength(X_H0))); s += ds_l
+        for i in range(self.NSEG):
+            pieces.append((pts[i], pts[i + 1], s + ds_h / 2, self.strength(axial[i]))); s += ds_h
+        for a, b in zip(lead_out[:-1], lead_out[1:]):
+            pieces.append((a, b, s + ds_l / 2, self.strength(X_H1))); s += ds_l
+
+        segs = VGroup(*[Line(a, b, stroke_color=self.WIRE, stroke_width=1.8)
+                        for a, b, _, _ in pieces])
         base, glow = ManimColor(self.WIRE), ManimColor(self.GLOW)
+        lam_w = s_helix / 6                        # six wavelengths fit on the wire
+        v_wire = s_helix / self.T_LOOP
 
         def paint(_):
-            u = self.beam.t / self.T_LOOP
-            for i, seg in enumerate(segs):
-                ph = TAU * 6 * (i / self.NSEG - u)
-                bead = (0.5 * (1 + np.sin(ph))) ** 4        # narrow, so it reads as motion
-                g = bead * (0.45 + 0.55 * self.strength(axial[i]))
+            t = self.beam.t
+            for seg, (_, _, sm, env) in zip(segs, pieces):
+                bead = (0.5 * (1 + np.sin(TAU * (sm - v_wire * t) / lam_w))) ** 4
+                g = bead * (0.45 + 0.55 * env)
                 seg.set_stroke(color=interpolate_color(base, glow, g),
                                width=1.8 + 4.6 * g, opacity=0.75 + 0.25 * g)
         segs.add_updater(paint)
         paint(None)
-        return segs
 
-    # -- the field that wave puts on the axis, where the beam is -----------
-    def wave_curve(self):
-        t = self.beam.t
-        return FunctionGraph(lambda x: AXIS_Y + self.AMP * self.e_field(x, t),
-                             x_range=[X_H0, X_H1, 0.015],
-                             color="#ffd27a", stroke_width=2.8)
+        ports = VGroup(*[Dot([x, self.Y_PORT, 0], radius=0.075, color=ACCENT)
+                         for x in (X_H0, X_H1)])
+        return segs, ports
+
+    # -- the amplitude, kept in a lane of its own --------------------------
+    def signal_lane(self):
+        base = DashedLine([X_H0, WAVE_Y, 0], [X_H1, WAVE_Y, 0], dash_length=0.08,
+                          stroke_color=FAINT, stroke_width=1, stroke_opacity=0.4)
+        env = VGroup(*[FunctionGraph(lambda x, k=sgn: WAVE_Y + k * self.AMP * self.strength(x),
+                                     x_range=[X_H0, X_H1, 0.05], color=self.GLOW,
+                                     stroke_width=1.2, stroke_opacity=0.32) for sgn in (1, -1)])
+        trace = always_redraw(lambda: FunctionGraph(
+            lambda x: WAVE_Y + self.AMP * self.e_field(x, self.beam.t),
+            x_range=[X_H0, X_H1, 0.015], color=self.GLOW, stroke_width=3.0))
+        drops = VGroup(*[DashedLine([x, self.Y_PORT - 0.14, 0], [x, WAVE_Y + 0.02, 0],
+                                    dash_length=0.07, stroke_color=FAINT,
+                                    stroke_width=1, stroke_opacity=0.5)
+                         for x in (X_H0, X_H1)])
+        label = VGroup(T("the same signal,", 18, MUTED), T("amplitude only", 18, MUTED)
+                       ).arrange(DOWN, buff=0.10).move_to([-5.55, WAVE_Y, 0])
+        return VGroup(base, env, trace, drops, label)
 
     # -- the magnets that keep the beam pinched ----------------------------
     def magnet_row(self):
@@ -894,19 +927,19 @@ class TWTLoop(TWTScene):
 
         electrons = tag("electrons", -3.45, AXIS_Y + 0.46,
                         [-3.45, AXIS_Y + 0.17, 0], size=19, color=ELECTRON)
-        magnets = tag("focusing magnets — they keep the beam pinched", -0.37, -0.98,
+        magnets = tag("focusing magnets — they keep the beam pinched", 0.0, -0.88,
                       [-0.37, -0.31, 0], size=19)
 
         rf_in = VGroup(T("RF in", 21, ACCENT_LT), T("weak signal", 18, FAINT)
                        ).arrange(DOWN, buff=0.09)
-        rf_in.move_to([0, -0.45, 0]).align_to([X_H0 - 0.30, 0, 0], RIGHT)
+        rf_in.move_to([0, self.Y_PORT, 0]).align_to([X_H0 - 0.28, 0, 0], RIGHT)
         rf_out = VGroup(T("RF out", 21, ACCENT_LT), T("amplified", 18, FAINT)
                         ).arrange(DOWN, buff=0.09)
-        rf_out.move_to([0, -0.45, 0]).align_to([X_H1 + 0.30, 0, 0], LEFT)
+        rf_out.move_to([0, self.Y_PORT, 0]).align_to([X_H1 + 0.28, 0, 0], LEFT)
 
-        key = T("Along the wire the signal runs at nearly the speed of light. Coiled into a "
-                "helix, it can only creep forward — at the speed of the electrons.",
-                19, MUTED, wrap=82)
-        key.move_to([0, -1.78, 0])
+        key = T("It enters at one connector and leaves at the other. Along the wire it runs at "
+                "nearly the speed of light — coiled into a helix it can only creep forward, at "
+                "the speed of the electrons.", 19, MUTED, wrap=100)
+        key.move_to([0, -2.98, 0])
 
         return VGroup(title, above, electrons, magnets, rf_in, rf_out, key)

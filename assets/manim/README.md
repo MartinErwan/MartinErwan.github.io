@@ -8,7 +8,7 @@ Source of the explainer animations on
 |---|---|---|
 | `TravelingWaveTube` | The full explainer: the tube, the electron beam and its focusing, why the helix slows the wave down, bunching and exponential gain | `assets/twt/twt-explainer.mp4` |
 | `ElectronGunProblem` | How gun parameters bend the beam trajectory, what interception costs, and why a learned surrogate was needed | `assets/twt/gun-problem.mp4` + `gun-problem-still.jpg` |
-| `TWTLoop` | The labelled figure used on the page. The signal is lit along the helix *wire*, so it visibly runs round every turn while creeping forward at beam speed; the axial field it sets up is drawn on the beam, where the electrons bunch. Loops exactly: the wave covers the whole wire in one loop, and six wavelengths fit on it | `assets/twt/twt-loop.gif` |
+| `TWTLoop` | The labelled figure used on the page. The signal is lit along the circuit it really travels — in at one RF connector, round every turn of the helix, out at the other — so the slow-wave trick is visible rather than asserted; its amplitude is plotted in a lane of its own below. Loops exactly: the wave covers the whole wire in one loop, and six wavelengths fit on it | `assets/twt/twt-loop.gif` |
 
 ## Rendering
 
@@ -28,7 +28,7 @@ ffmpeg -framerate 30 -start_number 0 -i TravelingWaveTube%04d.png \
 
 # gif — no dithering, the artwork is flat enough that it only adds noise
 ffmpeg -framerate 30 -start_number 0 -i TWTLoop%04d.png \
-       -vf "crop=1600:712:0:12,fps=15,scale=900:-1:flags=lanczos,split[a][b];\
+       -vf "crop=1600:816:0:12,fps=15,scale=900:-1:flags=lanczos,split[a][b];\
             [a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=none" \
        -loop 0 raw.gif
 gifsicle -O3 --lossy=25 raw.gif -o twt-loop.gif
@@ -45,9 +45,11 @@ bunches settle into the decelerating phase and hand their energy over. Note the
 sign: the force on an electron is -eE, so the half-cycles with `sin > 0` are the
 ones that *slow it down*.
 
-In `TWTLoop` the wire is cut into 360 pieces and each is lit by the phase of the
-wave at its own arc length along the wire, not at its x. That is the whole point:
-the signal covers 31 units of wire to advance 8 units down the tube, so it goes
-round and round while barely moving forward. The helix
+In `TWTLoop` the input lead, the helix and the output lead are cut into short
+pieces, and each is lit by the phase of the wave at its own arc length *along the
+wire*, not at its x. That is the whole point: the signal covers 31 units of wire
+to advance 8 units down the tube, so it goes round and round while barely moving
+forward. The helix is drawn with a phase offset of pi so that it starts and ends
+at the bottom of a turn, where the two leads come up to meet it. The helix
 is drawn with a pitch-to-circumference ratio that really does give a ~4x
 slow-down, so the "four times more wire" claim matches the picture on screen.
