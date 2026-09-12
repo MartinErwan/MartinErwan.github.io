@@ -78,7 +78,9 @@
     .step h4 { font-size: 14.5px; font-weight: 500; margin-bottom: 5px; }
     .step p { font-size: 14px; margin: 0; }
 
-    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 30px 24px; margin-top: 26px; }
+    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 30px 24px; margin-top: 26px; overflow-x: auto; }
+    /* below ~700px the labels stop being readable; let the diagram scroll instead */
+    .diagram-wrap svg { min-width: 660px; }
     .stack { display: flex; flex-wrap: wrap; gap: 8px; }
     .stack-tag { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-muted); border: 0.5px solid var(--border); }
 
@@ -310,51 +312,249 @@
           </div>
         </li>
       </ol>
+
+      <h3>What the model actually maps</h3>
+      <p>
+        One draw of magnet dimensions goes in; one number comes out — the beam power that reaches
+        the collector. Nothing more exotic than that, and that is the point: it is the same
+        question the solver answers, asked of a function you can evaluate a hundred thousand times.
+      </p>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 780 276" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"
+             role="img" aria-label="The surrogate maps one draw of magnet dimensions — each dimension a distribution, sampled — through a neural network to a single output: the beam power delivered to the collector, equal to accelerating voltage times transmitted current.">
+          <defs>
+            <marker id="ma" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#7a9bb5"/>
+            </marker>
+            <path id="bell2" d="M0,18 C8,18 10,2 21,2 C32,2 34,18 42,18"
+                  fill="none" stroke="#ffd27a" stroke-width="1.5"/>
+          </defs>
+          <style>
+            .mt   { fill:#e8edf2; font:500 12px system-ui; }
+            .ms   { fill:#7a9bb5; font:10.5px system-ui; }
+            .mcap { fill:#5b9bd5; font:500 10px system-ui; letter-spacing:.06em; }
+            .mln  { stroke:rgba(255,255,255,0.22); stroke-width:1; fill:none; }
+          </style>
+
+          <!-- ---------- input ---------- -->
+          <text x="8" y="20" class="mcap">IN — ONE DRAW FROM THE TOLERANCES</text>
+
+          <g transform="translate(8,44)">
+            <use href="#bell2"/><line x1="17" y1="18" x2="17" y2="4" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">ring length</text>
+          </g>
+          <g transform="translate(8,90)">
+            <use href="#bell2"/><line x1="27" y1="18" x2="27" y2="6" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">inner diameter</text>
+          </g>
+          <g transform="translate(8,136)">
+            <use href="#bell2"/><line x1="13" y1="18" x2="13" y2="9" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">outer diameter</text>
+          </g>
+          <g transform="translate(8,182)">
+            <use href="#bell2"/><line x1="24" y1="18" x2="24" y2="3" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">magnetisation</text>
+          </g>
+          <text x="8" y="240" class="ms">…one value drawn per dimension, per magnet of the stack</text>
+
+          <line class="mln" x1="215" y1="140" x2="258" y2="140" marker-end="url(#ma)"/>
+
+          <!-- ---------- the network ---------- -->
+          <g stroke="#5b9bd5" stroke-width="0.6" opacity="0.5">
+            <g id="edges">
+              <line x1="285" y1="60"  x2="350" y2="55"/><line x1="285" y1="60"  x2="350" y2="105"/>
+              <line x1="285" y1="60"  x2="350" y2="155"/><line x1="285" y1="60"  x2="350" y2="205"/>
+              <line x1="285" y1="100" x2="350" y2="55"/><line x1="285" y1="100" x2="350" y2="105"/>
+              <line x1="285" y1="100" x2="350" y2="155"/><line x1="285" y1="100" x2="350" y2="205"/>
+              <line x1="285" y1="140" x2="350" y2="55"/><line x1="285" y1="140" x2="350" y2="105"/>
+              <line x1="285" y1="140" x2="350" y2="155"/><line x1="285" y1="140" x2="350" y2="205"/>
+              <line x1="285" y1="180" x2="350" y2="55"/><line x1="285" y1="180" x2="350" y2="105"/>
+              <line x1="285" y1="180" x2="350" y2="155"/><line x1="285" y1="180" x2="350" y2="205"/>
+              <line x1="350" y1="55"  x2="420" y2="80"/><line x1="350" y1="55"  x2="420" y2="140"/>
+              <line x1="350" y1="55"  x2="420" y2="200"/>
+              <line x1="350" y1="105" x2="420" y2="80"/><line x1="350" y1="105" x2="420" y2="140"/>
+              <line x1="350" y1="105" x2="420" y2="200"/>
+              <line x1="350" y1="155" x2="420" y2="80"/><line x1="350" y1="155" x2="420" y2="140"/>
+              <line x1="350" y1="155" x2="420" y2="200"/>
+              <line x1="350" y1="205" x2="420" y2="80"/><line x1="350" y1="205" x2="420" y2="140"/>
+              <line x1="350" y1="205" x2="420" y2="200"/>
+              <line x1="420" y1="80"  x2="492" y2="140"/><line x1="420" y1="140" x2="492" y2="140"/>
+              <line x1="420" y1="200" x2="492" y2="140"/>
+            </g>
+          </g>
+          <g fill="#7cd4ff">
+            <circle cx="285" cy="60" r="4.5"/><circle cx="285" cy="100" r="4.5"/>
+            <circle cx="285" cy="140" r="4.5"/><circle cx="285" cy="180" r="4.5"/>
+          </g>
+          <g fill="#5b9bd5">
+            <circle cx="350" cy="55" r="4.5"/><circle cx="350" cy="105" r="4.5"/>
+            <circle cx="350" cy="155" r="4.5"/><circle cx="350" cy="205" r="4.5"/>
+            <circle cx="420" cy="80" r="4.5"/><circle cx="420" cy="140" r="4.5"/>
+            <circle cx="420" cy="200" r="4.5"/>
+          </g>
+          <circle cx="492" cy="140" r="6" fill="#ffd27a"/>
+          <text x="388" y="262" class="ms" text-anchor="middle">H2O AutoML set the baseline · TensorFlow fitted the network</text>
+
+          <line class="mln" x1="506" y1="140" x2="556" y2="140" marker-end="url(#ma)"/>
+
+          <!-- ---------- output ---------- -->
+          <text x="566" y="20" class="mcap">OUT — ONE NUMBER</text>
+          <rect x="566" y="44" width="206" height="176" rx="10"
+                fill="#112f50" stroke="#378ADD" stroke-width="1"/>
+          <text x="586" y="76" class="mt">Delivered beam power</text>
+          <text x="586" y="100" style="fill:#ffd27a;font:500 20px system-ui">P = U · I</text>
+          <text x="586" y="120" class="ms">accelerating voltage × the current</text>
+          <text x="586" y="135" class="ms">that actually reaches the collector</text>
+          <rect x="586" y="152" width="166" height="9" rx="4.5" fill="rgba(255,255,255,0.10)"/>
+          <rect x="586" y="152" width="124" height="9" rx="4.5" fill="#59d49b"/>
+          <text x="586" y="182" class="mt">75 % of nominal</text>
+          <text x="586" y="200" class="ms">U is fixed, so the share that arrives</text>
+          <text x="586" y="213" class="ms">is the share of the power</text>
+        </svg>
+      </div>
+      <p style="font-size:12.5px;color:var(--text-faint);margin-top:11px">
+        The dimensions named here are the obvious ones for a ring magnet; the set the study varied
+        is the project's own. The point is the shape of the mapping — a vector of drawn dimensions
+        in, one number out — not the particular list.
+      </p>
     </div>
 
     <!-- ======================= PIPELINE ======================= -->
     <div class="section">
       <div class="section-label">Pipeline</div>
       <h2>How the pieces fit together</h2>
+      <p>
+        The top row is what one honest answer costs. The bottom row is how the study actually
+        runs, with the learned model standing exactly where the solver was.
+      </p>
       <div class="diagram-wrap">
-        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto" role="img" aria-label="Pipeline diagram: magnet tolerances to Monte-Carlo sampling and ANSYS runs, to AutoML and deep learning, producing a surrogate used for the sensitivity study">
+        <svg viewBox="0 0 780 350" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"
+             role="img" aria-label="Pipeline: magnet tolerances are sampled, each draw costs a full ANSYS electron-optics run of several hours and returns the delivered beam power; a few hundred of those runs train a surrogate, which then answers in milliseconds and lets the Monte-Carlo run at a hundred thousand draws to give the distribution and the sensitivity ranking.">
           <defs>
-            <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
+            <marker id="pa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#5b9bd5"/>
             </marker>
+            <marker id="pg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#7a9bb5"/>
+            </marker>
+            <path id="bell" d="M0,20 C9,20 11,2 22,2 C33,2 35,20 44,20"
+                  fill="none" stroke="#ffd27a" stroke-width="1.6"/>
           </defs>
+          <style>
+            .bx  { fill:#0d2a45; stroke:rgba(255,255,255,0.12); stroke-width:0.8; }
+            .bxa { fill:#112f50; stroke:#378ADD; stroke-width:1; }
+            .t   { fill:#e8edf2; font:500 12px system-ui; }
+            .s   { fill:#7a9bb5; font:10.5px system-ui; }
+            .cap { fill:#5b9bd5; font:500 10px system-ui; letter-spacing:.06em; }
+            .cost{ fill:#ffd27a; font:500 10.5px system-ui; }
+            .ln  { stroke:rgba(255,255,255,0.22); stroke-width:1; fill:none; }
+          </style>
 
-          <rect x="10" y="65" width="140" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="195" y="65" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="370" y="30" width="130" height="55" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="370" y="105" width="130" height="55" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="560" y="65" width="130" height="60" rx="8" fill="#112f50" stroke="#378ADD" stroke-width="0.8"/>
+          <!-- ============ row 1: what one answer costs ============ -->
+          <text x="8" y="16" class="cap">ONE ANSWER</text>
 
-          <line x1="150" y1="95" x2="193" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="325" y1="85" x2="368" y2="65" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="325" y1="105" x2="368" y2="125" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="500" y1="58" x2="558" y2="85" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="500" y1="132" x2="558" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
+          <rect class="bx" x="8" y="28" width="150" height="86" rx="8"/>
+          <g transform="translate(24,46)">
+            <ellipse cx="12" cy="10" rx="7" ry="11" fill="none" stroke="#4f7fd6" stroke-width="2.4"/>
+            <ellipse cx="30" cy="10" rx="8.5" ry="13" fill="none" stroke="#9a5ad6" stroke-width="2.4"/>
+            <ellipse cx="49" cy="10" rx="6" ry="9.5" fill="none" stroke="#4f7fd6" stroke-width="2.4"/>
+            <text x="62" y="15" class="cost">±</text>
+          </g>
+          <text x="24" y="88" class="t">Magnet tolerances</text>
+          <text x="24" y="103" class="s">every dimension a distribution</text>
 
-          <text x="80" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Magnet tolerances</text>
-          <text x="80" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">dimensions as</text>
-          <text x="80" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">distributions</text>
+          <line class="ln" x1="164" y1="71" x2="192" y2="71" marker-end="url(#pg)"/>
 
-          <text x="260" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Monte Carlo</text>
-          <text x="260" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Persalys sampling</text>
-          <text x="260" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">ANSYS beam runs</text>
+          <rect class="bx" x="198" y="28" width="140" height="86" rx="8"/>
+          <g transform="translate(240,44)">
+            <use href="#bell"/>
+            <line x1="14" y1="20" x2="14" y2="6" stroke="#ffd27a" stroke-width="1.2" opacity="0.6"/>
+            <line x1="26" y1="20" x2="26" y2="3" stroke="#ffd27a" stroke-width="1.2" opacity="0.6"/>
+            <line x1="34" y1="20" x2="34" y2="9" stroke="#ffd27a" stroke-width="1.2" opacity="0.6"/>
+          </g>
+          <text x="214" y="88" class="t">Draw one stack</text>
+          <text x="214" y="103" class="s">Persalys · OpenTURNS</text>
 
-          <text x="435" y="50" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">AutoML</text>
-          <text x="435" y="65" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">H2O benchmark</text>
-          <text x="435" y="78" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">model selection</text>
+          <line class="ln" x1="344" y1="71" x2="372" y2="71" marker-end="url(#pg)"/>
 
-          <text x="435" y="122" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Deep Learning</text>
-          <text x="435" y="137" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">TensorFlow</text>
-          <text x="435" y="150" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">MLP architecture</text>
+          <rect class="bx" x="378" y="28" width="186" height="86" rx="8"/>
+          <g transform="translate(396,40)">
+            <rect x="0" y="2" width="150" height="26" rx="5" fill="none" stroke="#5b9bd5" stroke-width="1"/>
+            <path d="M4,15 C30,8 46,22 74,15 C102,8 122,22 146,15" fill="none"
+                  stroke="#7cd4ff" stroke-width="2"/>
+            <path d="M96,15 C104,9 112,21 122,15" fill="none" stroke="#e2574c" stroke-width="2"/>
+          </g>
+          <text x="396" y="88" class="t">Electron-optics run</text>
+          <text x="396" y="103" class="s">ANSYS particle tracking</text>
+          <text x="471" y="132" class="cost" text-anchor="middle">hours of CPU, per draw</text>
 
-          <text x="625" y="89" text-anchor="middle" font-size="11" fill="#5b9bd5" font-family="system-ui">Surrogate model</text>
-          <text x="625" y="104" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Sensitivity study at</text>
-          <text x="625" y="117" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Monte-Carlo scale</text>
+          <line class="ln" x1="570" y1="71" x2="598" y2="71" marker-end="url(#pg)"/>
+
+          <rect class="bx" x="604" y="28" width="168" height="86" rx="8"/>
+          <g transform="translate(620,44)">
+            <rect x="0" y="6" width="88" height="8" rx="4" fill="rgba(255,255,255,0.10)"/>
+            <rect x="0" y="6" width="66" height="8" rx="4" fill="#59d49b"/>
+            <text x="94" y="14" class="t">75%</text>
+          </g>
+          <text x="620" y="88" class="t">Delivered beam power</text>
+          <text x="620" y="103" class="s">P = U · I at the collector</text>
+
+          <!-- ============ the training link ============ -->
+          <path class="ln" d="M688,118 L688,160 L480,160 L480,200"
+                stroke="#378ADD" stroke-dasharray="4 3" marker-end="url(#pa)"/>
+          <text x="584" y="153" class="cap" text-anchor="middle">A FEW HUNDRED OF THESE BECOME THE TRAINING SET</text>
+
+          <!-- ============ row 2: how the study runs ============ -->
+          <text x="8" y="196" class="cap">THE STUDY</text>
+
+          <rect class="bx" x="198" y="206" width="140" height="86" rx="8"/>
+          <g transform="translate(240,222)">
+            <use href="#bell"/>
+            <line x1="10" y1="20" x2="10" y2="8" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="18" y1="20" x2="18" y2="4" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="26" y1="20" x2="26" y2="3" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="33" y1="20" x2="33" y2="6" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="39" y1="20" x2="39" y2="12" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+          </g>
+          <text x="214" y="266" class="t">Draw 100 000 stacks</text>
+          <text x="214" y="281" class="s">the same tolerances</text>
+
+          <line class="ln" x1="344" y1="249" x2="372" y2="249" marker-end="url(#pg)"/>
+
+          <rect class="bxa" x="378" y="206" width="186" height="86" rx="8"/>
+          <g transform="translate(400,220)" stroke="#5b9bd5" stroke-width="0.7" opacity="0.75">
+            <line x1="6" y1="6" x2="34" y2="4"/><line x1="6" y1="6" x2="34" y2="16"/>
+            <line x1="6" y1="16" x2="34" y2="4"/><line x1="6" y1="16" x2="34" y2="16"/>
+            <line x1="6" y1="26" x2="34" y2="16"/><line x1="6" y1="26" x2="34" y2="28"/>
+            <line x1="34" y1="4" x2="62" y2="16"/><line x1="34" y1="16" x2="62" y2="16"/>
+            <line x1="34" y1="28" x2="62" y2="16"/>
+          </g>
+          <g fill="#7cd4ff">
+            <circle cx="406" cy="226" r="3"/><circle cx="406" cy="236" r="3"/><circle cx="406" cy="246" r="3"/>
+            <circle cx="434" cy="224" r="3"/><circle cx="434" cy="236" r="3"/><circle cx="434" cy="248" r="3"/>
+            <circle cx="462" cy="236" r="3.5" fill="#ffd27a"/>
+          </g>
+          <text x="396" y="266" class="t">Surrogate model</text>
+          <text x="396" y="281" class="s">H2O AutoML → TensorFlow</text>
+          <text x="471" y="310" class="cost" text-anchor="middle">milliseconds, per draw</text>
+
+          <line class="ln" x1="570" y1="249" x2="598" y2="249" marker-end="url(#pg)"/>
+
+          <rect class="bx" x="604" y="206" width="168" height="86" rx="8"/>
+          <g transform="translate(620,220)">
+            <rect x="0"  y="24" width="7" height="6"  fill="#378ADD" opacity="0.7"/>
+            <rect x="9"  y="21" width="7" height="9"  fill="#378ADD" opacity="0.7"/>
+            <rect x="18" y="23" width="7" height="7"  fill="#378ADD" opacity="0.7"/>
+            <rect x="27" y="16" width="7" height="14" fill="#378ADD" opacity="0.7"/>
+            <rect x="36" y="19" width="7" height="11" fill="#378ADD" opacity="0.7"/>
+            <rect x="45" y="8"  width="7" height="22" fill="#378ADD" opacity="0.7"/>
+            <rect x="54" y="2"  width="7" height="28" fill="#5b9bd5"/>
+          </g>
+          <text x="620" y="266" class="t">The distribution</text>
+          <text x="620" y="281" class="s">and which dimension matters</text>
+
+          <!-- ============ the point ============ -->
+          <text x="8" y="340" class="s">The solver is what makes the question expensive; the model is what makes it answerable.</text>
         </svg>
       </div>
     </div>
