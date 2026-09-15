@@ -1,0 +1,66 @@
+[
+  {
+    "key": "b01",
+    "text": "Inside a traveling-wave tube: how a microwave signal surfs on a beam of electrons."
+  },
+  {
+    "key": "b02",
+    "text": "A traveling-wave tube is a microwave amplifier. Radar, satellite links, electronic warfare — where solid-state amplifiers run out of power."
+  },
+  {
+    "key": "b03",
+    "text": "Everything starts with a hot cathode boiling off electrons."
+  },
+  {
+    "key": "b04",
+    "text": "Twenty thousand volts push them to roughly a quarter of the speed of light."
+  },
+  {
+    "key": "b05",
+    "text": "Left alone the beam destroys itself — like charges repel."
+  },
+  {
+    "key": "b06",
+    "text": "Electrons that hit the helix turn it into a heater. The tube dies."
+  },
+  {
+    "key": "b07",
+    "text": "So a stack of permanent magnets squeezes it back into a pencil about a millimetre wide."
+  },
+  {
+    "key": "b08",
+    "text": "A radio wave travels at the speed of light — far too fast to keep pace with the electrons."
+  },
+  {
+    "key": "b09",
+    "text": "Wound into a helix, the signal must cover about four times more wire than the distance it moves forward. Its forward speed collapses to roughly a quarter of c — exactly the speed of the electrons."
+  },
+  {
+    "key": "b10",
+    "text": "Now the wave and the beam drift along together, and they start to feel each other."
+  },
+  {
+    "key": "b11",
+    "text": "The wave's own electric field sorts the beam: some electrons are slowed, some sped up."
+  },
+  {
+    "key": "b12",
+    "text": "Within a few centimetres the smooth stream has turned into a train of bunches."
+  },
+  {
+    "key": "b13",
+    "text": "The beam is set a hair faster than the wave, so the bunches drift into the region that holds them back — and every electron that is slowed hands its energy straight to the wave."
+  },
+  {
+    "key": "b14",
+    "text": "The signal grows exponentially along the tube."
+  },
+  {
+    "key": "b15",
+    "text": "None of it happens unless the beam stays a thin pencil the whole way — and what holds it is that stack of magnets. The focusing comes from their field being periodic, so every magnet has to match its neighbours."
+  },
+  {
+    "key": "b16",
+    "text": "They never quite do. How much manufacturing scatter the tube can absorb, and which dimension it is most sensitive to, is what this project set out to measure."
+  }
+]

@@ -3,7 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Electron Beam Prediction — Erwan Martin</title>
+  <meta name="description" content="How much beam power a traveling-wave tube loses to the manufacturing tolerances of its focusing magnets — Monte Carlo simulation replaced by a millisecond ML surrogate." />
+  <meta name="author" content="Erwan Martin" />
+  <link rel="canonical" href="https://martinerwan.github.io/projets/thales.html" />
+  <meta name="theme-color" content="#0d1b2a" />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://martinerwan.github.io/projets/thales.html" />
+  <meta property="og:title" content="Magnet Tolerances &amp; Beam Quality — Erwan Martin" />
+  <meta property="og:description" content="How much beam power a traveling-wave tube loses to the manufacturing tolerances of its focusing magnets — Monte Carlo simulation replaced by a millisecond ML surrogate." />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230d1b2a'/><text x='50' y='69' font-size='50' font-family='Helvetica,Arial,sans-serif' font-weight='600' fill='%23378ADD' text-anchor='middle'>EM</text></svg>" />
+  <title>Magnet Tolerances &amp; Beam Quality — Erwan Martin</title>
+  <meta name="description" content="A sensitivity study at Thales: how manufacturing scatter in a traveling-wave tube's focusing magnets costs beam power at the collector, with a learned surrogate standing in for the Monte-Carlo physics runs." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -11,36 +22,92 @@
       --text-muted: #7a9bb5; --text-faint: rgba(255,255,255,0.25);
       --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.18);
       --accent: #378ADD; --accent-bg: #0d2a45; --accent-text: #5b9bd5;
-      --radius: 8px; --radius-lg: 12px;
+      --warn: #ffcc66; --radius: 8px; --radius-lg: 12px;
     }
-    html { scroll-behavior: smooth; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; }
-    nav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    nav { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 0.5px solid var(--border); background: rgba(13,27,42,.85); backdrop-filter: saturate(140%) blur(8px); position: sticky; top: 0; z-index: 100; }
     .nav-logo { font-size: 15px; font-weight: 500; text-decoration: none; color: var(--text); }
-    .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .nav-back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .15s; }
     .nav-back:hover { color: var(--text); }
     .nav-back svg { width: 14px; height: 14px; }
+
     .container { max-width: 860px; margin: 0 auto; padding: 0 40px; }
-    .hero { padding: 64px 0 48px; border-bottom: 0.5px solid var(--border); }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 64px 0 44px; border-bottom: 0.5px solid var(--border); }
     .hero-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: var(--radius); background: var(--accent-bg); color: var(--accent-text); }
     .badge-company { background: #0a2218; color: #4a9e6b; }
-    .hero h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2; margin-bottom: 14px; letter-spacing: -.3px; }
-    .hero .subtitle { font-size: 15px; color: var(--text-muted); max-width: 600px; line-height: 1.75; }
-    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; padding: 40px 0; border-bottom: 0.5px solid var(--border); }
+    .hero h1 { font-size: clamp(26px, 4.4vw, 38px); font-weight: 500; line-height: 1.15; margin-bottom: 16px; letter-spacing: -.4px; }
+    .hero .subtitle { font-size: 16px; color: var(--text-muted); max-width: 620px; line-height: 1.75; }
+    .hero-facts { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 28px; }
+    .fact .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 3px; }
+    .fact .v { font-size: 13.5px; color: var(--text); }
+
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding: 36px 0; border-bottom: 0.5px solid var(--border); }
     .stat { background: var(--bg-secondary); border-radius: var(--radius); padding: 16px 20px; }
-    .stat .n { font-size: 22px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
-    .stat .l { font-size: 12px; color: var(--text-muted); }
-    .section { padding: 40px 0; border-bottom: 0.5px solid var(--border); }
-    .section:last-child { border-bottom: none; }
-    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 20px; }
-    .section p { font-size: 15px; color: var(--text-muted); line-height: 1.75; margin-bottom: 12px; }
+    .stat .n { font-size: 20px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+    .stat .l { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ---------- sections ---------- */
+    .section { padding: 48px 0; border-bottom: 0.5px solid var(--border); }
+    .section:last-of-type { border-bottom: none; }
+    .section-label { font-size: 11px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 14px; }
+    .section h2 { font-size: 21px; font-weight: 500; letter-spacing: -.2px; margin-bottom: 16px; line-height: 1.3; }
+    .section h3 { font-size: 16px; font-weight: 500; margin: 34px 0 12px; }
+    .section p { font-size: 15px; color: var(--text-muted); line-height: 1.8; margin-bottom: 14px; max-width: 68ch; }
     .section p:last-child { margin-bottom: 0; }
+    .section p.lead { font-size: 16.5px; color: #c2d4e2; }
+    .section strong { color: var(--text); font-weight: 500; }
+
+    /* ---------- figures ---------- */
+    .fig { margin: 30px 0 6px; }
+    .fig picture { display: block; }
+    .fig img { display: block; width: 100%; height: auto; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: #0b1724; }
+    .fig figcaption { font-size: 12.5px; color: var(--text-faint); line-height: 1.65; margin-top: 11px; }
+    .fig figcaption a { color: var(--accent-text); text-decoration: none; border-bottom: 0.5px solid rgba(91,155,213,.35); }
+    .fig figcaption a:hover { color: var(--text); }
+
+    /* ---------- idea cards ---------- */
+    .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 26px 0 6px; }
+    .idea { background: var(--bg-secondary); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .idea .k { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--accent-text); margin-bottom: 9px; }
+    .idea h4 { font-size: 14.5px; font-weight: 500; margin-bottom: 7px; }
+    .idea p { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin: 0; }
+
+    /* ---------- callout ---------- */
+    .callout { border-left: 2px solid var(--accent); background: linear-gradient(90deg, rgba(55,138,221,.07), transparent 70%); border-radius: 0 var(--radius) var(--radius) 0; padding: 18px 22px; margin: 28px 0 6px; }
+    .callout p { margin: 0; color: #c2d4e2; font-size: 15px; }
+
+    /* ---------- steps ---------- */
+    .steps { list-style: none; display: flex; flex-direction: column; gap: 18px; margin-top: 22px; }
+    .step { display: flex; gap: 16px; }
+    .step-n { flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--accent-text); background: var(--accent-bg); border-radius: 6px; padding: 3px 9px; margin-top: 3px; }
+    .step h4 { font-size: 14.5px; font-weight: 500; margin-bottom: 5px; }
+    .step p { font-size: 14px; margin: 0; }
+
+    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 30px 24px; margin-top: 26px; overflow-x: auto; }
+    /* below ~700px the labels stop being readable; let the diagram scroll instead */
+    .diagram-wrap svg { min-width: 660px; }
     .stack { display: flex; flex-wrap: wrap; gap: 8px; }
     .stack-tag { font-size: 13px; padding: 6px 14px; border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-muted); border: 0.5px solid var(--border); }
-    .diagram-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); border: 0.5px solid var(--border); padding: 32px 24px; margin-top: 4px; }
+
+    .page-nav { display: flex; justify-content: space-between; gap: 16px; padding: 32px 0 8px; flex-wrap: wrap; }
+    .page-nav a { font-size: 13.5px; color: var(--text-muted); text-decoration: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 16px; transition: border-color .15s, color .15s; }
+    .page-nav a:hover { color: var(--text); border-color: var(--border-hover); }
+
     footer { text-align: center; padding: 24px 40px; font-size: 12px; color: var(--text-faint); border-top: 0.5px solid var(--border); margin-top: 40px; }
-    @media (max-width: 640px) { nav, .container { padding-left: 20px; padding-right: 20px; } .hero { padding: 40px 0 32px; } }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 720px) { .ideas { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) {
+      nav, .container { padding-left: 20px; padding-right: 20px; }
+      .hero { padding: 40px 0 32px; } .section { padding: 38px 0; }
+      .hero-facts { gap: 18px 28px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   </style>
 </head>
 <body>
@@ -55,89 +122,452 @@
 
   <div class="container">
 
+    <!-- ======================= HERO ======================= -->
     <div class="hero">
       <div class="hero-meta">
-        <span class="badge">Physics simulation</span>
+        <span class="badge">Uncertainty quantification</span>
+        <span class="badge">Sensitivity analysis</span>
         <span class="badge">AutoML</span>
         <span class="badge">Deep Learning</span>
         <span class="badge badge-company">Thales · 2022</span>
       </div>
-      <h1>Electron Beam Trajectory<br>Prediction</h1>
+      <h1>What a magnet tolerance costs<br>an electron beam</h1>
       <p class="subtitle">
-        ML model predicting the trajectory of an electron beam from electron gun
-        parameters — using Monte Carlo simulations as a synthetic data source to
-        train AutoML and deep learning models at Thales.
+        Inside a certain kind of amplifier, a beam of electrons is held in line by a stack of
+        magnets. Make those magnets a fraction of a millimetre off and the beam starts losing
+        electrons on the way — and the amplifier loses power. How much? That question took hours
+        of simulation to answer once, so I taught a model to answer it in milliseconds.
       </p>
+      <div class="hero-facts">
+        <div class="fact"><div class="k">Role</div><div class="v">Data Scientist intern</div></div>
+        <div class="fact"><div class="k">Where</div><div class="v">Thales · Vélizy-Villacoublay</div></div>
+        <div class="fact"><div class="k">When</div><div class="v">May – Sep. 2022</div></div>
+        <div class="fact"><div class="k">Field</div><div class="v">Microwave vacuum electronics</div></div>
+      </div>
     </div>
 
     <div class="stats-row">
-      <div class="stat"><div class="n">Monte Carlo</div><div class="l">Synthetic data generation (ANSYS)</div></div>
+      <div class="stat"><div class="n">Persalys</div><div class="l">Tolerances as distributions; sensitivity analysis</div></div>
+      <div class="stat"><div class="n">ANSYS</div><div class="l">Electron-optics run behind every draw</div></div>
       <div class="stat"><div class="n">H2O</div><div class="l">AutoML benchmark across model families</div></div>
-      <div class="stat"><div class="n">TensorFlow</div><div class="l">Deep learning trajectory model</div></div>
-      <div class="stat"><div class="n">Persalys</div><div class="l">Uncertainty quantification & sensitivity</div></div>
+      <div class="stat"><div class="n">TensorFlow</div><div class="l">Neural-network surrogate</div></div>
     </div>
 
+    <!-- ======================= THE PROBLEM ======================= -->
     <div class="section">
-      <div class="section-label">Context</div>
-      <p>
-        Electron guns are used in high-precision industrial and defense systems at Thales.
-        Predicting how the beam trajectory responds to parameter changes typically requires
-        expensive physical simulations. The goal was to train an ML surrogate model
-        capable of replacing those simulations at inference time.
+      <div class="section-label">The problem</div>
+      <h2>Amplifying microwaves with a beam of electrons</h2>
+
+      <p class="lead">
+        Radars, satellite downlinks and electronic-warfare systems all need to turn a faint
+        microwave signal into a very strong one. Past a few hundred watts, and up into the tens
+        of gigahertz, that job still belongs to a vacuum device: the <strong>traveling-wave tube</strong>.
       </p>
       <p>
-        Since no historical dataset existed, Monte Carlo simulations were run using ANSYS
-        and Persalys to generate synthetic training data across the parameter space.
-        AutoML (H2O) was used to benchmark model families before exploring deep learning
-        architectures with TensorFlow.
+        Inside it, an electron gun fires a continuous, pencil-thin beam down the axis of the tube.
+        The signal to be amplified is wound around that beam as a helix of wire, which slows its
+        forward march down to the speed of the electrons themselves. Wave and beam then travel
+        together for the length of the tube — and the beam hands its energy over to the wave.
       </p>
+
+      <figure class="fig">
+        <picture>
+          <source srcset="../assets/twt/twt-loop-still.jpg" media="(prefers-reduced-motion: reduce)">
+          <img src="../assets/twt/twt-loop.gif" width="900" height="459"
+               alt="Animated diagram of a traveling-wave tube: the signal enters at the RF connector, climbs onto the helix, runs round every turn while creeping forward at the speed of the electrons, and leaves at the far connector much larger; a lane below plots its amplitude growing along the tube.">
+        </picture>
+        <figcaption>
+          Drawn for this page with <a href="https://www.manim.community/" target="_blank" rel="noopener">Manim</a>
+          (<a href="https://github.com/MartinErwan/MartinErwan.github.io/blob/main/assets/manim/twt.py" target="_blank" rel="noopener">source</a>).
+          The signal is drawn on the wire it actually travels on: in at one connector, right round every turn
+          of the helix, out at the other. That is why it only creeps forward — at the speed of the electrons,
+          which is what lets the two trade energy. The lane underneath plots the same signal's amplitude, and
+          the bunching is computed from the physics, not drawn by hand.
+          A longer walk-through — the same picture, with the slow-wave trick unrolled and the
+          magnets at the end of it — is available as a
+          <a href="../assets/twt/twt-explainer.mp4">narrated clip, just under three minutes</a>.
+        </figcaption>
+      </figure>
+
+      <div class="ideas">
+        <div class="idea">
+          <div class="k">Step 1</div>
+          <h4>Slow the wave down</h4>
+          <p>In free space the wave outruns the electrons several times over. Coiling the wire forces
+             it to take the long way round, dropping its forward speed to a fraction of <em>c</em> —
+             the speed of the beam.</p>
+        </div>
+        <div class="idea">
+          <div class="k">Step 2</div>
+          <h4>Bunch the electrons</h4>
+          <p>The axial field of the wave holds some electrons back and pushes others forward.
+             Within a few centimetres the smooth stream has become a train of dense bunches.</p>
+        </div>
+        <div class="idea">
+          <div class="k">Step 3</div>
+          <h4>Harvest the energy</h4>
+          <p>The beam is set slightly faster than the wave, so the bunches drift into the
+             decelerating phase and give up energy. The signal grows exponentially — 40 to 50 dB
+             end to end.</p>
+        </div>
+      </div>
+
+      <h3>And the beam is only as good as the magnets</h3>
+      <p>
+        A traveling-wave tube pinches its beam with a stack of permanent magnets — rings of
+        alternating polarity, one after another down the tube. The focusing does not come from
+        any one of them; it comes from the field being <strong>periodic</strong>. Break the
+        periodicity and the beam stops being held.
+      </p>
+      <p>
+        Manufacturing breaks it. Magnets come off the line with dimensional scatter — a little
+        under or over nominal — and every deviation leaves a dent in the field the beam travels
+        through. The beam starts to ripple, and wherever it swells wider than the tube that part
+        of it is simply scraped off on the wall: current lost, heat deposited where it
+        is least wanted, and power missing from the signal the tube exists to amplify.
+      </p>
+      <p>
+        So what the study measures is the beam that <em>arrives</em>. And the question is not
+        <em>does this design work</em> — it is <strong>how far off can the magnets be before the
+        tube starts losing power, and which of their dimensions matters most?</strong> That is a
+        question about a whole population of tubes rather than about one of them, which is
+        exactly what makes it expensive to answer.
+      </p>
+
+      <figure class="fig">
+        <picture>
+          <source srcset="../assets/twt/magnet-tolerance-still.jpg" media="(prefers-reduced-motion: reduce)">
+          <img src="../assets/twt/magnet-tolerance.gif" width="900" height="500"
+               alt="Animated diagram: as the size scatter of the focusing magnets grows, the field along the axis loses its periodicity, the beam ripples until part of it is scraped off on the wall, and the distribution of transmitted beam power over 400 magnet stacks develops a tail.">
+        </picture>
+        <figcaption>
+          One stack of magnets, its manufacturing errors dialled up and back down. The beam is
+          computed rather than drawn — it really does behave that way — and whatever swells past
+          the helix is gone. The histogram runs the same calculation over 400 different stacks, so
+          you can watch the tail grow as the tolerance opens: a study like the real one, in
+          miniature. The scale deliberately carries no figures
+          (<a href="https://github.com/MartinErwan/MartinErwan.github.io/blob/main/assets/manim/magnets.py" target="_blank" rel="noopener">source</a>).
+        </figcaption>
+      </figure>
+
+      <p>
+        Every draw in that histogram is one stack of magnets sampled from its tolerances, and one
+        full electron-optics run in ANSYS to find out how much beam survives it: hours of CPU. A Monte-Carlo study that converges wants
+        thousands of them, and a sensitivity analysis wants thousands more.
+      </p>
+
+      <div class="callout">
+        <p>
+          Hence the surrogate: run the expensive simulation a few hundred times, let a model learn
+          the mapping from magnet geometry to transmitted beam, and run the Monte-Carlo on the model
+          instead. Milliseconds a draw turns a study you cannot afford into one you can converge.
+        </p>
+      </div>
     </div>
 
+    <!-- ======================= APPROACH ======================= -->
     <div class="section">
-      <div class="section-label">Pipeline architecture</div>
+      <div class="section-label">Approach</div>
+      <h2>From a physics solver to a learned model</h2>
+      <p>
+        No historical dataset existed — nobody had logged thousands of magnet stacks and the beams
+        they produce. The training data had to be manufactured, which made the design of
+        experiments as much a part of the work as the modelling.
+      </p>
+
+      <ol class="steps">
+        <li class="step">
+          <span class="step-n">01</span>
+          <div>
+            <h4>Describe the uncertainty</h4>
+            <p>The magnet dimensions stop being single values and become probability
+               distributions, one per manufacturing tolerance. Persalys carries that
+               description and drives the sampling.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">02</span>
+          <div>
+            <h4>Buy the data</h4>
+            <p>Monte-Carlo draws from those distributions, each one a full electron-optics run in
+               ANSYS, each returning how much of the beam that stack of magnets actually delivers. This is the
+               step that costs hours, and the reason everything downstream exists.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">03</span>
+          <div>
+            <h4>Find out what the data supports</h4>
+            <p>Rather than guessing an architecture, H2O AutoML benchmarks whole families of
+               models — linear models, random forests, gradient boosting, stacked ensembles — on
+               the same targets. That sets the baseline any custom model has to beat.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">04</span>
+          <div>
+            <h4>Model it</h4>
+            <p>A neural network in TensorFlow mapping magnet geometry to transmitted beam, with the
+               feature preparation, scaling and validation split built around the structure of
+               the simulated data.</p>
+          </div>
+        </li>
+        <li class="step">
+          <span class="step-n">05</span>
+          <div>
+            <h4>Ask the question the study was for</h4>
+            <p>With a surrogate answering in milliseconds, the Monte-Carlo can run at a sample
+               size the solver could never reach — enough to see the distribution of delivered
+               beam power and to rank which magnet dimension the tube is most sensitive to.</p>
+          </div>
+        </li>
+      </ol>
+
+      <h3>What the model actually maps</h3>
+      <p>
+        One draw of magnet dimensions goes in; one number comes out — the beam power that reaches
+        the collector. Nothing more exotic than that, and that is the point: it is the same
+        question the solver answers, asked of a function you can evaluate a hundred thousand times.
+      </p>
       <div class="diagram-wrap">
-        <svg viewBox="0 0 780 190" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+        <svg viewBox="0 0 780 276" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"
+             role="img" aria-label="The surrogate maps one draw of magnet dimensions — each dimension a distribution, sampled — through a neural network to a single output: the beam power delivered to the collector, equal to accelerating voltage times transmitted current.">
           <defs>
-            <marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.25)"/>
+            <marker id="ma" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#7a9bb5"/>
             </marker>
+            <path id="bell2" d="M0,18 C8,18 10,2 21,2 C32,2 34,18 42,18"
+                  fill="none" stroke="#ffd27a" stroke-width="1.5"/>
           </defs>
+          <style>
+            .mt   { fill:#e8edf2; font:500 12px system-ui; }
+            .ms   { fill:#7a9bb5; font:10.5px system-ui; }
+            .mcap { fill:#5b9bd5; font:500 10px system-ui; letter-spacing:.06em; }
+            .mln  { stroke:rgba(255,255,255,0.22); stroke-width:1; fill:none; }
+          </style>
 
-          <rect x="10" y="65" width="140" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="195" y="65" width="130" height="60" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="370" y="30" width="130" height="55" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="370" y="105" width="130" height="55" rx="8" fill="#0d2a45" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
-          <rect x="560" y="65" width="130" height="60" rx="8" fill="#112f50" stroke="#378ADD" stroke-width="0.8"/>
+          <!-- ---------- input ---------- -->
+          <text x="8" y="20" class="mcap">IN — THE SIZE OF EACH MAGNET</text>
 
-          <line x1="150" y1="95" x2="193" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="325" y1="85" x2="368" y2="65" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="325" y1="105" x2="368" y2="125" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="500" y1="58" x2="558" y2="85" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
-          <line x1="500" y1="132" x2="558" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1" marker-end="url(#arr4)"/>
+          <g transform="translate(8,44)">
+            <use href="#bell2"/><line x1="17" y1="18" x2="17" y2="4" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">magnet 1</text>
+            <text x="118" y="16" class="ms">a hair under nominal</text>
+          </g>
+          <g transform="translate(8,90)">
+            <use href="#bell2"/><line x1="27" y1="18" x2="27" y2="6" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">magnet 2</text>
+            <text x="118" y="16" class="ms">a hair over</text>
+          </g>
+          <g transform="translate(8,136)">
+            <use href="#bell2"/><line x1="13" y1="18" x2="13" y2="9" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">magnet 3</text>
+            <text x="118" y="16" class="ms">further off</text>
+          </g>
+          <g transform="translate(8,182)">
+            <use href="#bell2"/><line x1="24" y1="18" x2="24" y2="3" stroke="#ffd27a" stroke-width="1.4"/>
+            <text x="54" y="16" class="mt">magnet 4</text>
+            <text x="118" y="16" class="ms">…and so on down the tube</text>
+          </g>
+          <text x="8" y="240" class="ms">nobody knows which way each one will be off — only the spread</text>
 
-          <text x="80" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Monte Carlo sim.</text>
-          <text x="80" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">ANSYS · Persalys</text>
-          <text x="80" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Synthetic dataset</text>
+          <line class="mln" x1="215" y1="140" x2="258" y2="140" marker-end="url(#ma)"/>
 
-          <text x="260" y="89" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Feature prep</text>
-          <text x="260" y="104" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">Gun parameters</text>
-          <text x="260" y="117" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">→ trajectory (x,y,z)</text>
+          <!-- ---------- the network ---------- -->
+          <g stroke="#5b9bd5" stroke-width="0.6" opacity="0.5">
+            <g id="edges">
+              <line x1="285" y1="60"  x2="350" y2="55"/><line x1="285" y1="60"  x2="350" y2="105"/>
+              <line x1="285" y1="60"  x2="350" y2="155"/><line x1="285" y1="60"  x2="350" y2="205"/>
+              <line x1="285" y1="100" x2="350" y2="55"/><line x1="285" y1="100" x2="350" y2="105"/>
+              <line x1="285" y1="100" x2="350" y2="155"/><line x1="285" y1="100" x2="350" y2="205"/>
+              <line x1="285" y1="140" x2="350" y2="55"/><line x1="285" y1="140" x2="350" y2="105"/>
+              <line x1="285" y1="140" x2="350" y2="155"/><line x1="285" y1="140" x2="350" y2="205"/>
+              <line x1="285" y1="180" x2="350" y2="55"/><line x1="285" y1="180" x2="350" y2="105"/>
+              <line x1="285" y1="180" x2="350" y2="155"/><line x1="285" y1="180" x2="350" y2="205"/>
+              <line x1="350" y1="55"  x2="420" y2="80"/><line x1="350" y1="55"  x2="420" y2="140"/>
+              <line x1="350" y1="55"  x2="420" y2="200"/>
+              <line x1="350" y1="105" x2="420" y2="80"/><line x1="350" y1="105" x2="420" y2="140"/>
+              <line x1="350" y1="105" x2="420" y2="200"/>
+              <line x1="350" y1="155" x2="420" y2="80"/><line x1="350" y1="155" x2="420" y2="140"/>
+              <line x1="350" y1="155" x2="420" y2="200"/>
+              <line x1="350" y1="205" x2="420" y2="80"/><line x1="350" y1="205" x2="420" y2="140"/>
+              <line x1="350" y1="205" x2="420" y2="200"/>
+              <line x1="420" y1="80"  x2="492" y2="140"/><line x1="420" y1="140" x2="492" y2="140"/>
+              <line x1="420" y1="200" x2="492" y2="140"/>
+            </g>
+          </g>
+          <g fill="#7cd4ff">
+            <circle cx="285" cy="60" r="4.5"/><circle cx="285" cy="100" r="4.5"/>
+            <circle cx="285" cy="140" r="4.5"/><circle cx="285" cy="180" r="4.5"/>
+          </g>
+          <g fill="#5b9bd5">
+            <circle cx="350" cy="55" r="4.5"/><circle cx="350" cy="105" r="4.5"/>
+            <circle cx="350" cy="155" r="4.5"/><circle cx="350" cy="205" r="4.5"/>
+            <circle cx="420" cy="80" r="4.5"/><circle cx="420" cy="140" r="4.5"/>
+            <circle cx="420" cy="200" r="4.5"/>
+          </g>
+          <circle cx="492" cy="140" r="6" fill="#ffd27a"/>
+          <text x="388" y="262" class="ms" text-anchor="middle">H2O AutoML set the baseline · TensorFlow fitted the network</text>
 
-          <text x="435" y="50" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">AutoML</text>
-          <text x="435" y="65" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">H2O benchmark</text>
-          <text x="435" y="78" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">model selection</text>
+          <line class="mln" x1="506" y1="140" x2="556" y2="140" marker-end="url(#ma)"/>
 
-          <text x="435" y="122" text-anchor="middle" font-size="11" fill="#e8edf2" font-family="system-ui">Deep Learning</text>
-          <text x="435" y="137" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">TensorFlow</text>
-          <text x="435" y="150" text-anchor="middle" font-size="10" fill="#7a9bb5" font-family="system-ui">MLP architecture</text>
-
-          <text x="625" y="89" text-anchor="middle" font-size="11" fill="#5b9bd5" font-family="system-ui">Surrogate model</text>
-          <text x="625" y="104" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">Replaces physical</text>
-          <text x="625" y="117" text-anchor="middle" font-size="10" fill="#378ADD" font-family="system-ui">simulation</text>
+          <!-- ---------- output ---------- -->
+          <text x="566" y="20" class="mcap">OUT — ONE NUMBER</text>
+          <rect x="566" y="44" width="206" height="176" rx="10"
+                fill="#112f50" stroke="#378ADD" stroke-width="1"/>
+          <text x="586" y="78" class="mt">How much power</text>
+          <text x="586" y="96" class="mt">comes out the far end</text>
+          <rect x="586" y="118" width="166" height="10" rx="5" fill="rgba(255,255,255,0.10)"/>
+          <rect x="586" y="118" width="124" height="10" rx="5" fill="#59d49b"/>
+          <text x="586" y="152" style="fill:#59d49b;font:500 22px system-ui">75 %</text>
+          <text x="586" y="172" class="ms">of what the tube should deliver</text>
+          <text x="586" y="198" class="ms">lose a quarter of the electrons</text>
+          <text x="586" y="211" class="ms">and you lose a quarter of the power</text>
         </svg>
       </div>
     </div>
 
+    <!-- ======================= PIPELINE ======================= -->
+    <div class="section">
+      <div class="section-label">Pipeline</div>
+      <h2>How the pieces fit together</h2>
+      <p>
+        The top row is what one honest answer costs. The bottom row is how the study actually
+        runs, with the learned model standing exactly where the solver was.
+      </p>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 780 350" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto"
+             role="img" aria-label="Pipeline: magnet tolerances are sampled, each draw costs a full ANSYS electron-optics run of several hours and returns the delivered beam power; a few hundred of those runs train a surrogate, which then answers in milliseconds and lets the Monte-Carlo run at a hundred thousand draws to give the distribution and the sensitivity ranking.">
+          <defs>
+            <marker id="pa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#5b9bd5"/>
+            </marker>
+            <marker id="pg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L8,3 z" fill="#7a9bb5"/>
+            </marker>
+            <path id="bell" d="M0,20 C9,20 11,2 22,2 C33,2 35,20 44,20"
+                  fill="none" stroke="#ffd27a" stroke-width="1.6"/>
+          </defs>
+          <style>
+            .bx  { fill:#0d2a45; stroke:rgba(255,255,255,0.12); stroke-width:0.8; }
+            .bxa { fill:#112f50; stroke:#378ADD; stroke-width:1; }
+            .t   { fill:#e8edf2; font:500 12px system-ui; }
+            .s   { fill:#7a9bb5; font:10.5px system-ui; }
+            .cap { fill:#5b9bd5; font:500 10px system-ui; letter-spacing:.06em; }
+            .cost{ fill:#ffd27a; font:500 10.5px system-ui; }
+            .ln  { stroke:rgba(255,255,255,0.22); stroke-width:1; fill:none; }
+          </style>
+
+          <!-- ============ row 1: what one answer costs ============ -->
+          <text x="8" y="16" class="cap">ONE ANSWER</text>
+
+          <rect class="bx" x="8" y="28" width="150" height="86" rx="8"/>
+          <g transform="translate(24,46)">
+            <ellipse cx="12" cy="10" rx="7" ry="11" fill="none" stroke="#4f7fd6" stroke-width="2.4"/>
+            <ellipse cx="30" cy="10" rx="8.5" ry="13" fill="none" stroke="#9a5ad6" stroke-width="2.4"/>
+            <ellipse cx="49" cy="10" rx="6" ry="9.5" fill="none" stroke="#4f7fd6" stroke-width="2.4"/>
+            <text x="62" y="15" class="cost">±</text>
+          </g>
+          <text x="24" y="88" class="t">Magnet tolerances</text>
+          <text x="24" y="103" class="s">every dimension a distribution</text>
+
+          <line class="ln" x1="164" y1="71" x2="192" y2="71" marker-end="url(#pg)"/>
+
+          <rect class="bx" x="198" y="28" width="140" height="86" rx="8"/>
+          <g transform="translate(240,44)">
+            <use href="#bell"/>
+            <line x1="14" y1="20" x2="14" y2="6" stroke="#ffd27a" stroke-width="1.2" opacity="0.6"/>
+            <line x1="26" y1="20" x2="26" y2="3" stroke="#ffd27a" stroke-width="1.2" opacity="0.6"/>
+            <line x1="34" y1="20" x2="34" y2="9" stroke="#ffd27a" stroke-width="1.2" opacity="0.6"/>
+          </g>
+          <text x="214" y="88" class="t">Draw one stack</text>
+          <text x="214" y="103" class="s">Persalys · OpenTURNS</text>
+
+          <line class="ln" x1="344" y1="71" x2="372" y2="71" marker-end="url(#pg)"/>
+
+          <rect class="bx" x="378" y="28" width="186" height="86" rx="8"/>
+          <g transform="translate(396,40)">
+            <rect x="0" y="2" width="150" height="26" rx="5" fill="none" stroke="#5b9bd5" stroke-width="1"/>
+            <path d="M4,15 C30,8 46,22 74,15 C102,8 122,22 146,15" fill="none"
+                  stroke="#7cd4ff" stroke-width="2"/>
+            <path d="M96,15 C104,9 112,21 122,15" fill="none" stroke="#e2574c" stroke-width="2"/>
+          </g>
+          <text x="396" y="88" class="t">Electron-optics run</text>
+          <text x="396" y="103" class="s">ANSYS particle tracking</text>
+          <text x="471" y="132" class="cost" text-anchor="middle">hours of CPU, per draw</text>
+
+          <line class="ln" x1="570" y1="71" x2="598" y2="71" marker-end="url(#pg)"/>
+
+          <rect class="bx" x="604" y="28" width="168" height="86" rx="8"/>
+          <g transform="translate(620,44)">
+            <rect x="0" y="6" width="88" height="8" rx="4" fill="rgba(255,255,255,0.10)"/>
+            <rect x="0" y="6" width="66" height="8" rx="4" fill="#59d49b"/>
+            <text x="94" y="14" class="t">75%</text>
+          </g>
+          <text x="620" y="88" class="t">Delivered beam power</text>
+          <text x="620" y="103" class="s">what comes out the far end</text>
+
+          <!-- ============ the training link ============ -->
+          <path class="ln" d="M688,118 L688,160 L480,160 L480,200"
+                stroke="#378ADD" stroke-dasharray="4 3" marker-end="url(#pa)"/>
+          <text x="584" y="153" class="cap" text-anchor="middle">A FEW HUNDRED OF THESE BECOME THE TRAINING SET</text>
+
+          <!-- ============ row 2: how the study runs ============ -->
+          <text x="8" y="196" class="cap">THE STUDY</text>
+
+          <rect class="bx" x="198" y="206" width="140" height="86" rx="8"/>
+          <g transform="translate(240,222)">
+            <use href="#bell"/>
+            <line x1="10" y1="20" x2="10" y2="8" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="18" y1="20" x2="18" y2="4" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="26" y1="20" x2="26" y2="3" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="33" y1="20" x2="33" y2="6" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+            <line x1="39" y1="20" x2="39" y2="12" stroke="#ffd27a" stroke-width="1" opacity="0.5"/>
+          </g>
+          <text x="214" y="266" class="t">Draw 100 000 stacks</text>
+          <text x="214" y="281" class="s">the same tolerances</text>
+
+          <line class="ln" x1="344" y1="249" x2="372" y2="249" marker-end="url(#pg)"/>
+
+          <rect class="bxa" x="378" y="206" width="186" height="86" rx="8"/>
+          <g transform="translate(400,220)" stroke="#5b9bd5" stroke-width="0.7" opacity="0.75">
+            <line x1="6" y1="6" x2="34" y2="4"/><line x1="6" y1="6" x2="34" y2="16"/>
+            <line x1="6" y1="16" x2="34" y2="4"/><line x1="6" y1="16" x2="34" y2="16"/>
+            <line x1="6" y1="26" x2="34" y2="16"/><line x1="6" y1="26" x2="34" y2="28"/>
+            <line x1="34" y1="4" x2="62" y2="16"/><line x1="34" y1="16" x2="62" y2="16"/>
+            <line x1="34" y1="28" x2="62" y2="16"/>
+          </g>
+          <g fill="#7cd4ff">
+            <circle cx="406" cy="226" r="3"/><circle cx="406" cy="236" r="3"/><circle cx="406" cy="246" r="3"/>
+            <circle cx="434" cy="224" r="3"/><circle cx="434" cy="236" r="3"/><circle cx="434" cy="248" r="3"/>
+            <circle cx="462" cy="236" r="3.5" fill="#ffd27a"/>
+          </g>
+          <text x="396" y="266" class="t">Surrogate model</text>
+          <text x="396" y="281" class="s">H2O AutoML → TensorFlow</text>
+          <text x="471" y="310" class="cost" text-anchor="middle">milliseconds, per draw</text>
+
+          <line class="ln" x1="570" y1="249" x2="598" y2="249" marker-end="url(#pg)"/>
+
+          <rect class="bx" x="604" y="206" width="168" height="86" rx="8"/>
+          <g transform="translate(620,220)">
+            <rect x="0"  y="24" width="7" height="6"  fill="#378ADD" opacity="0.7"/>
+            <rect x="9"  y="21" width="7" height="9"  fill="#378ADD" opacity="0.7"/>
+            <rect x="18" y="23" width="7" height="7"  fill="#378ADD" opacity="0.7"/>
+            <rect x="27" y="16" width="7" height="14" fill="#378ADD" opacity="0.7"/>
+            <rect x="36" y="19" width="7" height="11" fill="#378ADD" opacity="0.7"/>
+            <rect x="45" y="8"  width="7" height="22" fill="#378ADD" opacity="0.7"/>
+            <rect x="54" y="2"  width="7" height="28" fill="#5b9bd5"/>
+          </g>
+          <text x="620" y="266" class="t">The distribution</text>
+          <text x="620" y="281" class="s">and which dimension matters</text>
+
+          <!-- ============ the point ============ -->
+          <text x="8" y="340" class="s">The solver is what makes the question expensive; the model is what makes it answerable.</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ======================= STACK ======================= -->
     <div class="section">
       <div class="section-label">Stack</div>
       <div class="stack">
@@ -150,10 +580,16 @@
         <span class="stack-tag">NumPy / Pandas</span>
         <span class="stack-tag">Git</span>
       </div>
+
+      <div class="page-nav">
+        <a href="../index.html#projects">← All projects</a>
+        <a href="total.html">Next: acoustic deep learning at TotalEnergies →</a>
+      </div>
     </div>
 
   </div>
 
-  <footer>Erwan Martin · <a href="../index.html" style="color:var(--accent);text-decoration:none">erwan-martin.github.io</a></footer>
+  <footer>Erwan Martin · <a href="../index.html">martinerwan.github.io</a></footer>
+
 </body>
 </html>
